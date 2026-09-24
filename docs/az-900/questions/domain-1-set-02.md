@@ -120,8 +120,8 @@ D. 物理サーバーを最大需要分購入する
 
 **試験で見分けるポイント:** 「イベント駆動」「サーバー管理を意識しない」「コードに集中」はserverlessの代表的な手掛かりです。
 
-**対応skill:** Describe cloud service types / serverless computing  
-**公式根拠:** https://learn.microsoft.com/en-us/training/modules/describe-cloud-service-types/
+**対応skill:** Describe cloud computing / define serverless computing  
+**公式根拠:** https://learn.microsoft.com/en-us/training/modules/describe-cloud-compute/
 
 ## Coverage
 
@@ -131,6 +131,6 @@ D. 物理サーバーを最大需要分購入する
 | Q2 | Benefits of cloud services | Reliability |
 | Q3 | Benefits of cloud services | Predictability |
 | Q4 | Benefits of cloud services | Governance |
-| Q5 | Cloud service types | Serverless computing |
+| Q5 | Cloud computing | Serverless computing |
 
 次回はDomain 1の残る薄い論点（security、manageability、elasticity、IaaS/SaaSの適切なuse caseなど）を優先します。
