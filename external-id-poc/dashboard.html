@@ -1,5 +1,25 @@
-<!doctype html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>External ID PoC | 認証後</title></head><body data-page="dashboard">
-<main class="card"><div class="eyebrow">SIGNED-IN AREA · DEMO</div><h1>認証後のページ</h1><p class="lead">こんにちは、<strong id="user-name">ゲスト</strong>さん。</p>
-<p id="status" role="status">認証情報を確認中…</p><div class="actions"><a class="secondary" href="/">トップページ</a><button id="sign-out" type="button" class="secondary hidden">ログアウト</button></div>
-<p class="note">学習用SPAのため認証済み表示はブラウザ側で制御しています。<br>このページに機密情報を配置しないでください。<br>機密APIの保護にはサーバー側でのトークン検証と認可が必要です。</p></main>
-<script type="module" src="/src/main.js"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>External ID PoC | JWT検証</title></head>
+<body data-page="dashboard">
+<main class="card">
+  <div class="eyebrow">SIGNED-IN AREA · DEMO</div>
+  <h1>認証後のページ</h1>
+  <p class="lead">こんにちは、<strong id="user-name">ゲスト</strong>さん。</p>
+  <p id="status" role="status">認証情報を確認中…</p>
+  <div class="actions"><a class="secondary" href="/">トップページ</a><button id="sign-out" type="button" class="secondary hidden">ログアウト</button></div>
+  <section id="api-lab" aria-labelledby="api-lab-heading" style="margin-top:2rem;border-top:1px solid #d6e2ef;padding-top:1rem">
+    <h2 id="api-lab-heading">アクセストークンのAPI検証</h2>
+    <p>APIはJWTの署名・有効期限・発行者・対象API・api.read権限をサーバー側で検証します。</p>
+    <div class="actions">
+      <button id="test-no-token" class="secondary" type="button">① トークンなし</button>
+      <button id="test-valid-token" class="primary" type="button">② 正しいトークン</button>
+      <button id="test-tampered-token" class="secondary" type="button">③ 改ざんトークン</button>
+    </div>
+    <p id="api-result" role="status" aria-live="polite">ボタンを押すとHTTPステータスが表示されます。</p>
+    <p class="note">結果はHTTP 401（認証不可）、403（権限不足）、200（許可）で比較します。トークンの中身は画面にもログにも表示しません。権限不足・期限切れ等はAPIの自動テストでも確認します。</p>
+  </section>
+  <p class="note">このHTML自体は公開ファイルです。機密情報をページに埋め込まず、データはAPI側で保護してください。</p>
+</main>
+<script type="module" src="/src/main.js"></script>
+</body></html>

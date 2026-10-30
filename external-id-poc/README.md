@@ -35,3 +35,16 @@ npm run build
 - ブラウザにJWT、クライアントシークレット、パスワードを共有しないでください。
 
 公式ドキュメント: https://learn.microsoft.com/en-us/entra/msal/javascript/browser/redirect-bridge
+
+## 保護されたAPIの検証（2026年10月）
+
+- マネージドAzure Functions V4（Node.js 22）: \`external-id-poc/api\`
+- APIアプリ（client ID）: \`def986c6-008f-426e-9ec9-21074cbdaf62\`
+- Delegated scope: \`api://def986c6-008f-426e-9ec9-21074cbdaf62/api.read\`
+- API: \`GET /api/protected\`。Authorization: Bearer <access_token> を要求。
+- アクセストークンの署名をテナントのJWKSで検証し、issuer、audience、tenant ID、version、時刻、および \`scp\` を検証する。Microsoft Graphへのリクエスト単位の問い合わせは不要。
+- 公開ページ上の3ボタンで、トークンなし→401、正常→200、改ざん→401を比較する。ブラウザでログイン後に正常ボタンを押すと、必要に応じてMSALが追加のトークン取得フローを開始する。
+- 権限不足→403、期限切れ→401、他のaudience→401、issuer不一致→401は、署名付きのローカルテスト用JWTで検証する（本物のユーザー用トークンや秘密鍵は保存しない）。
+- APIローカルテスト: \`cd external-id-poc/api && npm ci && npm test\`。
+- GitHub Actionsの \`api_location\` は \`/external-id-poc/api\` を指定する。Static Web Apps FreeのマネージドAPIを使用する。
+- データは認証後にAPIから返し、公開HTML内に秘密情報を配置しない。トークンはAPIで永続保存しない。
