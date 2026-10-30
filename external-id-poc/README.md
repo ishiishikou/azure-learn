@@ -14,7 +14,7 @@
 4. SPAは `GET /api/protected` の `X-Authorization: Bearer <access_token>` でアクセストークンを送信する。
 5. APIはMicrosoftのJWKSによる署名、issuer、audience、tenant、期限、`api.read` を検証する。
 6. APIが200なら `/dashboard.html` でアプリを表示する。401/403・通信エラーならアプリを表示せずエラーメッセージを表示する。
-7. ログアウト後は自動再ログインせず、再サインインボタンのみ表示する。
+7. SSO検証モードではログアウト後にMicrosoftのログイン要求を再開する。`prompt=login` は付けず、認証画面が再表示されるかSSOで自動復帰するかを観察する。
 
 MSAL Browser v5のリダイレクトブリッジは `/redirect.html` を使用する。
 Entra管理センターのSPAリダイレクトURIも公開サイトの
@@ -44,7 +44,7 @@ Managed Functionsの `Authorization` ヘッダーはStatic Web Appsの内部処�
 1. シークレットウィンドウで `https://kind-mushroom-09e25b600.1.azurestaticapps.net/` を開く。
 2. アプリ画面が表示されず、Microsoft Entra External IDのログインへリダイレクトされること。
 3. 正しいユーザーでログイン後、APIからHTTP 200を受け取りアプリ画面が表示されること。
-4. ログアウトで再認証ボタンへ戻ること。
+4. ログアウト後にMicrosoftへ再ログイン要求が送られ、パスワード入力が必要かSSOで自動復帰するかを確認すること。
 5. `GET /api/protected` を `X-Authorization` なしで呼んで401、不正トークンを `X-Authorization` に入れて401になること。
 6. 期限切れ・別API向け・scope不足はAPIの自動テストで確認する。
 

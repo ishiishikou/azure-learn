@@ -71,9 +71,14 @@ async function authenticate(app) {
   const account = redirectResult?.account || app.getActiveAccount() || app.getAllAccounts()[0];
 
   if (!account) {
-    const signedOut = sessionStorage.getItem(KEY.signedOut) === '1';
+    const logoutMode = sessionStorage.getItem(KEY.signedOut);
     const interrupted = sessionStorage.getItem(KEY.loginPending) === '1';
-    if (signedOut) {
+    if (logoutMode === 'test-relogin') {
+      // OIDC end-session completed. Re-enter the regular sign-in flow without
+      // prompt=login, to observe whether an Entra/IdP SSO session still exists.
+      sessionStorage.removeItem(KEY.loginPending);
+      await startLogin(app);
+    } else if (logoutMode === '1') {
       showRetry('ログアウトしました。再度利用する場合はサインインしてください。');
     } else if (interrupted) {
       sessionStorage.removeItem(KEY.loginPending);
@@ -135,7 +140,9 @@ async function main() {
     });
     document.querySelector('#sign-out')?.addEventListener('click', async event => {
       event.currentTarget.disabled = true;
-      sessionStorage.setItem(KEY.signedOut, '1');
+      // Experimental mode: after Entra sign-out, request login again.
+      // The result may be a sign-in prompt or automatic SSO; do not force prompt=login.
+      sessionStorage.setItem(KEY.signedOut, 'test-relogin');
       try {
         await app.logoutRedirect({
           account: app.getActiveAccount(),
