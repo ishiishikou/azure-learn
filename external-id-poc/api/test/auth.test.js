@@ -49,3 +49,28 @@ test('valid signed token without scope => 403', async () => {
   assert.deepEqual(await authorizeBearer('Bearer '+await tokenFor({scopes:'other.permission'}),keys),
     {ok:false,status:403,error:'insufficient_scope'});
 });
+
+// Integration-level regression tests for Static Web Apps' Authorization forwarding.
+// Inject a test authorizer so no real token is printed or required.
+import { protectedHandler } from '../src/functions/protected.js';
+test('SWA Authorization injection is ignored if X-Authorization is absent (401)', async () => {
+  const request = { headers: new Headers({ Authorization: 'Bearer swa-internal-token' }) };
+  const response = await protectedHandler(request, async header => {
+    assert.equal(header, null);
+    return { ok: false, status: 401, error: 'missing_bearer_token' };
+  });
+  assert.equal(response.status, 401);
+  assert.deepEqual(response.jsonBody, {error:'missing_bearer_token'});
+});
+test('dedicated X-Authorization is passed to JWT validator (200)', async () => {
+  const request = { headers: new Headers({
+    Authorization: 'Bearer swa-internal-token',
+    'X-Authorization': 'Bearer customer-access-token'
+  }) };
+  const response = await protectedHandler(request, async header => {
+    assert.equal(header, 'Bearer customer-access-token');
+    return { ok: true, status: 200 };
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.jsonBody.permission, 'api.read');
+});

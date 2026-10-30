@@ -11,7 +11,7 @@
 1. `/` または `/dashboard.html` に未認証でアクセスする。
 2. MSAL Browser v5がEntra External IDのログイン画面にリダイレクトする。
 3. Microsoftでサインインし、`api://def986c6-008f-426e-9ec9-21074cbdaf62/api.read` スコープを取得する。
-4. SPAは `GET /api/protected` にBearerアクセストークンを送信する。
+4. SPAは `GET /api/protected` の `X-Authorization: Bearer <access_token>` でアクセストークンを送信する。
 5. APIはMicrosoftのJWKSによる署名、issuer、audience、tenant、期限、`api.read` を検証する。
 6. APIが200なら `/dashboard.html` でアプリを表示する。401/403・通信エラーならアプリを表示せずエラーメッセージを表示する。
 7. ログアウト後は自動再ログインせず、再サインインボタンのみ表示する。
@@ -21,6 +21,10 @@ Entra管理センターのSPAリダイレクトURIも公開サイトの
 `https://kind-mushroom-09e25b600.1.azurestaticapps.net/redirect.html` に一致させる。
 
 > Microsoftで既にサインイン済みならSSOでログイン入力を省略することがある。ログイン画面を検証する際はプライベートウィンドウを利用する。
+
+## Static Web Appsのヘッダー注意事項
+
+Managed Functionsの `Authorization` ヘッダーはStatic Web Appsの内部処理により置き換えられることがある。PoCではSPAからAPI用アクセストークンを `X-Authorization` で渡し、APIはこのヘッダーを読む。これは認証の省略ではない。必ずJWKS署名とissuer・audience・tenant・期限・scopeを検証する。APIの内部ヘッダーをログや画面に出さない。
 
 ## 構成
 
@@ -41,7 +45,7 @@ Entra管理センターのSPAリダイレクトURIも公開サイトの
 2. アプリ画面が表示されず、Microsoft Entra External IDのログインへリダイレクトされること。
 3. 正しいユーザーでログイン後、APIからHTTP 200を受け取りアプリ画面が表示されること。
 4. ログアウトで再認証ボタンへ戻ること。
-5. `GET /api/protected` をBearerトークンなしで呼んで401、不正トークンで401になること。
+5. `GET /api/protected` を `X-Authorization` なしで呼んで401、不正トークンを `X-Authorization` に入れて401になること。
 6. 期限切れ・別API向け・scope不足はAPIの自動テストで確認する。
 
 ## ローカルテスト

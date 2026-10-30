@@ -1,8 +1,10 @@
 import { app } from '@azure/functions';
 import { authorizeBearer } from '../auth.js';
 
-export async function protectedHandler(request) {
-  const auth = await authorizeBearer(request.headers.get('authorization'));
+export async function protectedHandler(request, authorize = authorizeBearer) {
+  // Managed Static Web Apps can overwrite Authorization for Functions routing.
+  // Read ONLY the SPA-provided dedicated header, never SWA's internal token.
+  const auth = await authorize(request.headers.get('x-authorization'));
   const headers = { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' };
   if (!auth.ok) {
     if (auth.status === 401) headers['WWW-Authenticate'] = 'Bearer';

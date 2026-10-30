@@ -38,11 +38,13 @@ function showApplication(account, apiData) {
 }
 
 async function validateWithApi(token) {
-  // Only the backend decides whether access is allowed. No raw JWT is displayed.
+  // SWA may replace the standard Authorization header with its own Functions token.
+  // Use a dedicated header; the backend still validates the signed Entra JWT.
+  // Do not display, persist, or log the raw access token.
   const res = await fetch('/api/protected', {
     method: 'GET',
     cache: 'no-store',
-    headers: { Authorization: 'Bearer ' + token }
+    headers: { 'X-Authorization': 'Bearer ' + token }
   });
   if (res.status !== 200) {
     const err = new Error('api_access_denied');
