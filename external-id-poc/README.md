@@ -1,50 +1,60 @@
-# Entra External ID PoC (Azure Static Web Apps Free)
+# Entra External ID PoC — 認証ファースト構成（Static Web Apps Free）
 
-Entra External ID のユーザー認証後に `/dashboard.html` を表示する、学習用 JavaScript SPA です。アップロードされたMicrosoftのサンプルを元に作成。
+## 検証目的
+
+ユーザーがアプリを開くとMicrosoft Entra External IDのサインインへ自動遷移し、SPAが取得した **API用アクセストークン** をAzure Functionsでサーバー側検証する。
+**成功（HTTP 200）を確認してからのみアプリ画面を表示する。**
+独自のログインフォームは作らない。
+
+## 処理の流れ
+
+1. `/` または `/dashboard.html` に未認証でアクセスする。
+2. MSAL Browser v5がEntra External IDのログイン画面にリダイレクトする。
+3. Microsoftでサインインし、`api://def986c6-008f-426e-9ec9-21074cbdaf62/api.read` スコープを取得する。
+4. SPAは `GET /api/protected` にBearerアクセストークンを送信する。
+5. APIはMicrosoftのJWKSによる署名、issuer、audience、tenant、期限、`api.read` を検証する。
+6. APIが200なら `/dashboard.html` でアプリを表示する。401/403・通信エラーならアプリを表示せずエラーメッセージを表示する。
+7. ログアウト後は自動再ログインせず、再サインインボタンのみ表示する。
+
+MSAL Browser v5のリダイレクトブリッジは `/redirect.html` を使用する。
+Entra管理センターのSPAリダイレクトURIも公開サイトの
+`https://kind-mushroom-09e25b600.1.azurestaticapps.net/redirect.html` に一致させる。
+
+> Microsoftで既にサインイン済みならSSOでログイン入力を省略することがある。ログイン画面を検証する際はプライベートウィンドウを利用する。
 
 ## 構成
 
-- Entra External ID: `externalidpoc2026test.ciamlogin.com`
-- SPA client ID: `8fc65eb9-6112-4c8b-acd3-c6a348c36e19`
-- MSAL Browser v5 + redirect bridge (Vite)
-- 秘密情報は不要。クライアントIDは公開識別子です。
+- Azure Static Web Apps: Free（静的ファイルは公開ホスティング）
+- SPA: Vite + MSAL Browser v5
+- 認証: Entra External ID（専用テナント）
+- Web API: Static Web Appsに統合したAzure Functions（Node.js 22）
+- APIの保護: JWT検証 (`jose`) + `api.read` スコープの承認
+- CI/CD: GitHub Actions。信頼できるfeatureブランチへのpushでのみデプロイ。
 
-## Static Web Apps Free への配置
+**セキュリティ境界はAPIです。** `dashboard.html` やJavaScriptは未認証でもダウンロードできる。
+画面表示の制御はユーザー体験用であり、機密データを保護できるのはサーバー側の認可だけ。
+トークン、パスワード、クライアントシークレットを画面やGitHubに記録しない。
 
-1. Azure Portalで **Static Web Apps** → **作成**、既存RG `rg-externalid-poc` / プラン **Free**。
-2. ソース **GitHub**、リポジトリ `ishiishikou/azure-learn`、ブランチはデプロイしたいブランチを選択。
-3. ビルドプリセット **Custom**、App location `/external-id-poc`、API location 空、Output location `dist`。
-4. GitHub Actionsが成功したらAzure Static Web Appsの公開URLを確認。
-5. Entra管理センターの **External ID PoC** テナント → **アプリの登録** → 対象SPA → **認証** で、SPAリダイレクトURIとして `https://<YOUR-SITE>.azurestaticapps.net/redirect.html` を追加。**完全一致**が必要です。
-6. ブラウザで公開URLへアクセスし「サインイン」を押す。認証後 `/dashboard.html` に遷移すれば成功。
+## 動作確認
 
-## ローカルビルド
+1. シークレットウィンドウで `https://kind-mushroom-09e25b600.1.azurestaticapps.net/` を開く。
+2. アプリ画面が表示されず、Microsoft Entra External IDのログインへリダイレクトされること。
+3. 正しいユーザーでログイン後、APIからHTTP 200を受け取りアプリ画面が表示されること。
+4. ログアウトで再認証ボタンへ戻ること。
+5. `GET /api/protected` をBearerトークンなしで呼んで401、不正トークンで401になること。
+6. 期限切れ・別API向け・scope不足はAPIの自動テストで確認する。
+
+## ローカルテスト
 
 ```bash
-npm install
+cd external-id-poc
+npm ci
 npm run build
+cd api
+npm ci
+npm test
 ```
 
-ローカルで認証する場合は `http://127.0.0.1:5173/redirect.html` をSPAリダイレクトURIに追加する必要があります。
+ローカルのブラウザログインを検証するには、`http://127.0.0.1:5173/redirect.html` をEntraアプリのSPAリダイレクトURIに追加する必要がある。
 
-## 注意事項
-
-- `dashboard.html` 自体は公開静的ファイルです。**認可されたAPIへのアクセス制御ではありません**。機密情報は配置しないでください。
-- 実運用ではAPI側のアクセストークン検証と認可が必要です。
-- Static Web Appsの組み込みカスタム認証はStandard向けです。本PoCはFreeの静的ホスティングとMSAL.jsを使います。
-- ブラウザにJWT、クライアントシークレット、パスワードを共有しないでください。
-
-公式ドキュメント: https://learn.microsoft.com/en-us/entra/msal/javascript/browser/redirect-bridge
-
-## 保護されたAPIの検証（2026年10月）
-
-- マネージドAzure Functions V4（Node.js 22）: \`external-id-poc/api\`
-- APIアプリ（client ID）: \`def986c6-008f-426e-9ec9-21074cbdaf62\`
-- Delegated scope: \`api://def986c6-008f-426e-9ec9-21074cbdaf62/api.read\`
-- API: \`GET /api/protected\`。Authorization: Bearer <access_token> を要求。
-- アクセストークンの署名をテナントのJWKSで検証し、issuer、audience、tenant ID、version、時刻、および \`scp\` を検証する。Microsoft Graphへのリクエスト単位の問い合わせは不要。
-- 公開ページ上の3ボタンで、トークンなし→401、正常→200、改ざん→401を比較する。ブラウザでログイン後に正常ボタンを押すと、必要に応じてMSALが追加のトークン取得フローを開始する。
-- 権限不足→403、期限切れ→401、他のaudience→401、issuer不一致→401は、署名付きのローカルテスト用JWTで検証する（本物のユーザー用トークンや秘密鍵は保存しない）。
-- APIローカルテスト: \`cd external-id-poc/api && npm ci && npm test\`。
-- GitHub Actionsの \`api_location\` は \`/external-id-poc/api\` を指定する。Static Web Apps FreeのマネージドAPIを使用する。
-- データは認証後にAPIから返し、公開HTML内に秘密情報を配置しない。トークンはAPIで永続保存しない。
+公式資料: https://learn.microsoft.com/en-us/entra/msal/javascript/browser/redirect-bridge

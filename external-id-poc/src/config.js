@@ -1,4 +1,4 @@
-// Public MSAL.js configuration; never put secrets in browser source.
+// Public SPA configuration. Never include application secrets in browser code.
 export const API_SCOPE = 'api://def986c6-008f-426e-9ec9-21074cbdaf62/api.read';
 export const msalConfig = {
   auth: {
@@ -14,4 +14,5 @@ export const msalConfig = {
   },
   cache: { cacheLocation: 'sessionStorage' }
 };
-export const loginRequest = { scopes: ['openid', 'profile'] };
+// Request the protected API permission as part of sign-in, not on a later button click.
+export const loginRequest = { scopes: ['openid', 'profile', API_SCOPE] };
