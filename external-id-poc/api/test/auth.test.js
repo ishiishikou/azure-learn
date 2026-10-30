@@ -52,13 +52,13 @@ test('valid signed token without scope => 403', async () => {
 
 // Integration-level regression tests for Static Web Apps' Authorization forwarding.
 // Inject a test authorizer so no real token is printed or required.
-import { protectedHandler } from '../src/functions/protected.js';
+import { createProtectedHandler, protectedHandler } from '../src/functions/protected.js';
 test('SWA Authorization injection is ignored if X-Authorization is absent (401)', async () => {
   const request = { headers: new Headers({ Authorization: 'Bearer swa-internal-token' }) };
-  const response = await protectedHandler(request, async header => {
+  const response = await createProtectedHandler(async header => {
     assert.equal(header, null);
     return { ok: false, status: 401, error: 'missing_bearer_token' };
-  });
+  })(request, { invocationId: 'runtime-context' });
   assert.equal(response.status, 401);
   assert.deepEqual(response.jsonBody, {error:'missing_bearer_token'});
 });
@@ -67,10 +67,17 @@ test('dedicated X-Authorization is passed to JWT validator (200)', async () => {
     Authorization: 'Bearer swa-internal-token',
     'X-Authorization': 'Bearer customer-access-token'
   }) };
-  const response = await protectedHandler(request, async header => {
+  const response = await createProtectedHandler(async header => {
     assert.equal(header, 'Bearer customer-access-token');
     return { ok: true, status: 200 };
-  });
+  })(request, { invocationId: 'runtime-context' });
   assert.equal(response.status, 200);
   assert.equal(response.jsonBody.permission, 'api.read');
+});
+
+test('Azure Functions context must not override the authorizer', async () => {
+  const request = { headers: new Headers() };
+  const result = await protectedHandler(request, { invocationId: 'runtime-context' });
+  assert.equal(result.status, 401);
+  assert.equal(result.jsonBody.error, 'missing_bearer_token');
 });
