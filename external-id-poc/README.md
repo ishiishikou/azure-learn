@@ -14,7 +14,7 @@
 4. SPAは `GET /api/protected` の `X-Authorization: Bearer <access_token>` でアクセストークンを送信する。
 5. APIはMicrosoftのJWKSによる署名、issuer、audience、tenant、期限、`api.read` を検証する。
 6. APIが200なら `/dashboard.html` でアプリを表示する。401/403・通信エラーならアプリを表示せずエラーメッセージを表示する。
-7. SSO検証モードではログアウト後にMicrosoftのログイン要求を再開する。`prompt=login` は付けず、認証画面が再表示されるかSSOで自動復帰するかを観察する。
+7. SSO検証モードでは、2種類の終了処理を比較する。アプリのみログアウト（Microsoftの案内⑤なし）と、Microsoftからもログアウト（⑤が表示される可能性あり）。ログアウト後にMicrosoftのログイン要求を再開する。`prompt=login` は付けず、認証画面が再表示されるかSSOで自動復帰するかを観察する。
 
 MSAL Browser v5のリダイレクトブリッジは `/redirect.html` を使用する。
 Entra管理センターのSPAリダイレクトURIも公開サイトの
@@ -62,3 +62,11 @@ npm test
 ローカルのブラウザログインを検証するには、`http://127.0.0.1:5173/redirect.html` をEntraアプリのSPAリダイレクトURIに追加する必要がある。
 
 公式資料: https://learn.microsoft.com/en-us/entra/msal/javascript/browser/redirect-bridge
+
+## 画面⑤（Microsoftのサインアウト案内）を省く比較実験
+
+アプリ画面の **「⑤なしで再ログイン（アプリのみ終了）」** は、MSAL.js の `logoutRedirect` に `onRedirectNavigate: () => false` を指定して、**アプリのキャッシュだけ**を削除する。Entra External IDの `end_session_endpoint` にはアクセスしない。そのためMicrosoft側のSSO Cookieは残り、次回ログインが自動的に完了する可能性がある。**これは完全なログアウトではない。**
+
+**「Microsoftからもログアウト（⑤あり）」** は従来どおりMSALとEntra External IDの両方を終了し、同様にログイン要求を再開する。Microsoft提供の⑤の画面表示はアプリ側からは制御できない。
+
+両方の動作を比較して、利用者のログアウト操作の意味、アプリ側のキャッシュとMicrosoft側SSOの違いを観察する。検証後に本番へ移す場合、アプリのみログアウトを通常のログアウトとして提供しない。

@@ -138,6 +138,30 @@ async function main() {
         retry.disabled = false;
       }
     });
+    // SSO experiment only: remove this app's account/token cache without ending
+    // the Microsoft-side SSO session. This intentionally avoids screen ⑤.
+    document.querySelector('#sign-out-local')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      const fullLogout = document.querySelector('#sign-out');
+      if (fullLogout) fullLogout.disabled = true;
+      sessionStorage.setItem(KEY.signedOut, 'test-relogin');
+      sessionStorage.removeItem(KEY.consentPending);
+      try {
+        // Official MSAL local-only logout: abort navigation to the Entra end-session endpoint.
+        await app.logoutRedirect({
+          account: app.getActiveAccount(),
+          onRedirectNavigate: () => false
+        });
+        window.location.replace('/'); // Start a new login request without prompt=login.
+      } catch (e) {
+        sessionStorage.removeItem(KEY.signedOut);
+        if (application) application.hidden = true;
+        if (authShell) authShell.hidden = false;
+        showRetry('アプリのみログアウトに失敗しました（' + safeErrorCode(e) + '）。');
+        button.disabled = false;
+      }
+    });
     document.querySelector('#sign-out')?.addEventListener('click', async event => {
       event.currentTarget.disabled = true;
       // Experimental mode: after Entra sign-out, request login again.

@@ -25,8 +25,10 @@
     <p id="api-message" role="status" aria-live="polite"></p>
     <p class="note">Microsoft Entra External IDで認証し、バックエンドのJWT・api.read検証が成功したため、この画面を表示しています。</p>
     <div class="actions">
-      <button id="sign-out" type="button" class="secondary">ログアウト</button>
+      <button id="sign-out-local" type="button" class="primary">⑤なしで再ログイン（アプリのみ終了）</button>
+      <button id="sign-out" type="button" class="secondary">Microsoftからもログアウト（⑤あり）</button>
     </div>
+    <p class="note">検証用：⑤なしの操作はMicrosoft側のSSOセッションを終了しません。パスワード入力なしで戻る場合があります。</p>
     <p class="note">このHTMLとJavaScriptは公開ファイルです。実際の機密データはAPIの認可後にのみ返してください。</p>
   </main>
   <script type="module" src="/src/main.js"></script>
