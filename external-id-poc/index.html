@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>External ID PoC | 認証中</title>
+</head>
+<body data-page="entry">
+  <main class="card" id="auth-shell">
+    <div class="eyebrow">MICROSOFT ENTRA EXTERNAL ID</div>
+    <h1>認証しています</h1>
+    <p id="status" role="status" aria-live="polite">Microsoft のログイン画面へ接続しています…</p>
+    <div class="actions">
+      <button id="retry" type="button" class="primary hidden">Microsoft でサインイン</button>
+    </div>
+    <p class="note">ログイン後、APIがアクセストークンを検証してからアプリを開きます。</p>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

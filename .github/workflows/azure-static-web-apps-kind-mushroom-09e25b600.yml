@@ -1,0 +1,35 @@
+name: Azure Static Web Apps CI/CD
+
+# Deployment secrets are available only for trusted pushes, never for PR code.
+on:
+  push:
+    branches:
+      - feature/entra-externalid-swa-poc
+
+# The workflow only needs read access to checkout source code.
+permissions:
+  contents: read
+
+# Do not deploy two revisions to the same Static Web App concurrently.
+concurrency:
+  group: azure-static-web-apps-external-id-poc
+  cancel-in-progress: false
+
+jobs:
+  build_and_deploy_job:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Job
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Build and deploy
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # pinned v1 action
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_KIND_MUSHROOM_09E25B600 }}
+          action: "upload"
+          app_location: "/external-id-poc"
+          api_location: "/external-id-poc/api"
+          output_location: "dist"

@@ -1,0 +1,13 @@
+{
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY"
+  },
+  "mimeTypes": {
+    ".html": "text/html"
+  },
+  "platform": {
+    "apiRuntime": "node:22"
+  }
+}
