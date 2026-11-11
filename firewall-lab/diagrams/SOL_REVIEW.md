@@ -48,3 +48,14 @@
 参照：
 - https://learn.microsoft.com/en-us/azure/firewall/deploy-firewall-basic-portal-policy
 - https://www.drawio.com/docs/reference/embed-mode/
+
+## 2026-11-11 最新図面の再レビュー（公式draw.io Skill準拠）
+
+- 対象コミット: `9b100850f998823ad97e005517dd26ad1ef07e71`
+- レビュアー: RDC内Codex CLI `gpt-6.1-sol` を明示指定
+- **構成図のみの判定: PASS**
+- 直前のREVISE指摘（下段の`route_name`、`policy_id`、`pip_data`、`pip_mgmt`におけるラベルの欠け）を解消したことをPNG目視、draw.io XML、生成コードで確認
+- PNGは2688×1563。画像に埋め込まれたdraw.io XMLもレビューされ、図形・接続関係の一致を確認
+- 構成図の構造テストは実装側RDCで33件成功
+- レビュアー側のローカルsandboxは起動できず、GitHubコネクタでファイルを読み取って検証。レビュー側のローカルテスト実行は未実施
+- iPhone Safariの実機操作とAzure実リソースでの構築・通信・削除は**依然未検証**。ハンズオン全体の完了判定はINCOMPLETE
