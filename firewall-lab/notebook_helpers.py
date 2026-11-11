@@ -5,11 +5,42 @@ import os
 import shlex
 import subprocess
 import threading
+from pathlib import Path
+import re
+from cli_runtime import azure_cli_env
 import ipywidgets as widgets
 from IPython.display import display
 
 
 LOGIN_TIMEOUT_SECONDS = 900
+
+# The concrete tenant is local configuration and must NOT be committed.
+# This is a tenant identifier (not a token), but keeping private configuration
+# outside GitHub avoids binding the public study sample to one person's account.
+TENANT_PATH = Path(__file__).resolve().parent / ".state" / "azure-tenant-id"
+
+
+def configured_tenant() -> str | None:
+    """Tenant from environment or local non-committed file."""
+    value = (os.getenv("AZURE_LAB_TENANT_ID") or
+             (TENANT_PATH.read_text().strip() if TENANT_PATH.is_file() else ""))
+    if not value:
+        return None
+    if not re.fullmatch(
+        r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}"
+        r"|[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.onmicrosoft\.com", value
+    ):
+        raise ValueError("ローカルのAzureテナント設定が不正です。")
+    return value
+
+
+def login_command() -> list[str]:
+    """Explicit tenant prevents signing in against the wrong directory."""
+    command = ["az", "login", "--use-device-code"]
+    tenant = configured_tenant()
+    if tenant:
+        command.extend(["--tenant", tenant])
+    return command
 
 
 class LearningSession:
@@ -22,7 +53,7 @@ class LearningSession:
         self.picker = None
 
     def login(self):
-        command = ["az", "login", "--use-device-code"]
+        command = login_command()
         print("$", shlex.join(command), flush=True)
         print("表示される https://microsoft.com/devicelogin にアクセスしてコードを入力してください。", flush=True)
         # Forward the device code to the notebook cell in real time.
@@ -30,7 +61,7 @@ class LearningSession:
         # Jupyter's IOPub channel, so explicitly stream it through print.
         proc = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1
+            text=True, bufsize=1, env=azure_cli_env()
         )
         expired = threading.Event()
         def expire():
@@ -47,7 +78,11 @@ class LearningSession:
             if expired.is_set():
                 raise TimeoutError("Azure CLIのデバイス認証が期限内に終わりませんでした。")
             if ret:
-                raise RuntimeError("Azure CLI認証に失敗しました。")
+                raise RuntimeError(
+                    "Azure CLI認証に失敗しました。Portalと同じアカウント/テナントで"
+                    "サインインしているかを確認してください。"
+                    "『No subscriptions found』の場合は対象テナントでの契約権限を確認します。"
+                )
             return ret
         finally:
             watchdog.cancel()
@@ -211,7 +246,7 @@ class LearningSession:
         args += ["--only-show-errors"]
         print("$", shlex.join(args), flush=True)
         result = subprocess.run(args, capture_output=True, text=True,
-                                check=False, timeout=1200)
+                                check=False, timeout=1200, env=azure_cli_env())
         if result.returncode:
             print("失敗:\n", result.stderr[-2500:], flush=True)
             raise RuntimeError("Azure CLI失敗: 終了コード " + str(result.returncode))

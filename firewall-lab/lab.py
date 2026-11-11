@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 import verification as check
+from cli_runtime import azure_cli_env
 
 RG = "rg-firewall-lab"
 LOCATION = "japaneast"
@@ -90,7 +91,7 @@ def run_cli(
         try:
             proc = subprocess.run(
                 argv, capture_output=True, text=True, timeout=timeout,
-                env=os.environ.copy(), check=False,
+                env=azure_cli_env(), check=False,
             )
         except FileNotFoundError as exc:
             raise LabError("Azure CLI (az) が見つかりません。") from exc

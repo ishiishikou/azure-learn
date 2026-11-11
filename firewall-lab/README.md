@@ -55,6 +55,27 @@ Azureリソースの変更・削除コマンドを実行する直前に、共通
 
 スマートフォン版はリポジトリ内の信頼できるNotebookコードセルをPythonカーネルで実行します。未検証のNotebookをこのサーバーに置かないでください。
 
+## Azure CLIのデバイス認証と複数テナント
+
+Azure CLIの `az login --use-device-code` が `No subscriptions found` を返す場合、
+先にAzure Portalで利用しているディレクトリ（テナント）を確認してください。
+サインインしたMicrosoftアカウントが正しくても、CLIが異なるテナントを参照すると契約が見つからない場合があります。
+
+RDC上では、Azure PortalのディレクトリIDを個人用のローカル設定
+`.state/azure-tenant-id` に保存します（このフォルダはgitignore対象）。
+Notebook・スマホ画面は共通の `notebook_helpers.login_command()` を使い、
+`az login --use-device-code --tenant <対象テナント>` を実行します。
+別環境では `AZURE_LAB_TENANT_ID` 環境変数でも指定できます。
+**実際のテナントID・認証情報はリポジトリに登録しません。**
+
+RDCのAlpineコンテナでIPv6経路がないにもかかわらずAzure CLIのPython HTTPクライアントが
+IPv6だけを試して接続に失敗する事象を確認しました。
+このRDCに限り `.state/ipv4only/sitecustomize.py` でurllib3をIPv4に限定し、
+`cli_runtime.azure_cli_env()` でAzure CLIの子プロセスにのみ設定を反映します。
+OS全体のネットワーク・DNS・Tailscale設定は変更しません。
+サブスクリプションが取得できたことを `az account list --all` で確認してから
+学習用リソースを操作してください。
+
 ## 起動方法
 
 1. **学習用Notebook（PC向け）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。

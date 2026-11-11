@@ -275,34 +275,17 @@ def make_mobile_learning_app():
     button_next.on_click(lambda _: go(active_index[0] + 1))
 
     def run_login():
-        append_log("Azure CLIのデバイス認証を開始します。")
-        append_log("https://microsoft.com/devicelogin をiPhoneの別タブで開きます。")
-        p = subprocess.Popen(
-            ["az", "login", "--use-device-code", "--only-show-errors"],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
-        )
-        expired = threading.Event()
-        def expire():
-            if p.poll() is None:
-                expired.set()
-                p.kill()
-        watchdog = threading.Timer(900, expire)
-        watchdog.daemon = True
-        watchdog.start()
+        # Reuse the SAME transparent device-login implementation as Jupyter.
+        # No separate CLI command or tenant selection is hidden in the phone UI.
+        from notebook_helpers import configured_tenant
+        if configured_tenant():
+            append_log("Azure Portalで確認したテナントを明示してサインインします。")
+        stream = _WidgetStream(append_log)
         try:
-            for line in p.stdout:
-                if "accessToken" not in line and "refreshToken" not in line:
-                    append_log(line.rstrip()[:900])
-            rc = p.wait()
-            if expired.is_set():
-                raise TimeoutError("Azureデバイス認証が期限内に終了しませんでした。")
-            if rc:
-                raise RuntimeError(f"Azureログインが終了コード{rc}で失敗しました。")
+            with contextlib.redirect_stdout(stream):
+                session.login()
         finally:
-            watchdog.cancel()
-            if p.poll() is None:
-                p.kill()
-                p.wait()
+            stream.flush()
 
     def run_step(index):
         step = steps[index]
