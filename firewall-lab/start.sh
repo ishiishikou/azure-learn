@@ -11,4 +11,4 @@ fi
 .venv/bin/python -m pip install -q -r requirements.txt
 .venv/bin/python build_notebook.py
 echo "Listening at http://${VOILA_IP:-127.0.0.1}:${VOILA_PORT:-8866}"
-exec .venv/bin/voila firewall_hands_on.ipynb --no-browser --Voila.ip="${VOILA_IP:-127.0.0.1}" --Voila.port="${VOILA_PORT:-8866}" --Voila.root_dir="$(pwd)"
+exec .venv/bin/voila mobile_dashboard.ipynb --no-browser --Voila.ip="${VOILA_IP:-127.0.0.1}" --Voila.port="${VOILA_PORT:-8866}" --Voila.root_dir="$(pwd)"

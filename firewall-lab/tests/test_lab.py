@@ -97,6 +97,9 @@ class FakeAzureCLI:
             self.public_ips.add(name)
             add(name, "Microsoft.Network/publicIPAddresses")
             return res({"name": name})
+        if cmd[:3] == ["network", "public-ip", "show"]:
+            return res({"name": opt("-n"), "sku": {"name": "Standard"},
+                        "publicIPAllocationMethod": "Static"})
         if cmd[:3] == ["network", "firewall", "list"]:
             return res([{"name": FW}] if self.firewall else [])
         if cmd[:3] == ["network", "firewall", "create"]:
@@ -104,14 +107,29 @@ class FakeAzureCLI:
             add(FW, "Microsoft.Network/azureFirewalls")
             return res({"name": FW})
         if cmd[:3] == ["network", "firewall", "show"]:
-            return res({"sku": {"tier": "Basic"},
-                        "ipConfigurations": [{"privateIPAddress": "10.0.0.4"}]})
+            return res({"sku": {"tier": "Basic", "name": "AZFW_VNet"},
+                        "provisioningState": "Succeeded",
+                        "firewallPolicy": {"id": "/policies/lab"},
+                        "ipConfigurations": [{
+                            "privateIPAddress": "10.0.0.4",
+                            "publicIPAddress": {"id": "/publicIPAddresses/pip-firewall-lab"}}],
+                        "managementIpConfiguration": {
+                            "publicIPAddress": {"id": "/publicIPAddresses/pip-firewall-mgmt-lab"}}})
         if cmd[:3] == ["network", "nic", "list"]:
             return res([{"name": NIC}] if self.nic else [])
         if cmd[:3] == ["network", "nic", "create"]:
             self.nic = True
             add(NIC, "Microsoft.Network/networkInterfaces")
             return res({"name": NIC})
+        if cmd[:3] == ["network", "nic", "show"]:
+            return res({"name": NIC, "ipConfigurations": [{
+                "name": "ipconfig1", "subnet": {"id": "/subnets/WorkloadSubnet"},
+                "publicIPAddress": None
+            }]})
+        if cmd[:3] == ["network", "nic", "show-effective-route-table"]:
+            return res({"value": [{
+                "addressPrefix": ["0.0.0.0/0"], "nextHopType": "VirtualAppliance",
+                "nextHopIpAddress": "10.0.0.4", "state": "Active"}]})
         if cmd[:2] == ["vm", "list"]:
             return res([{"name": VM}] if self.vm else [])
         if cmd[:2] == ["vm", "create"]:
@@ -120,7 +138,9 @@ class FakeAzureCLI:
             add(DISK, "Microsoft.Compute/disks")
             return res({"name": VM})
         if cmd[:2] == ["vm", "show"]:
-            return res({"name": VM})
+            return res({"name": VM, "provisioningState": "Succeeded",
+                        "hardwareProfile": {"vmSize": "Standard_B1s"},
+                        "networkProfile": {"networkInterfaces": [{"id": "/networkInterfaces/nic-firewall-lab"}]}})
         if cmd[:3] == ["network", "route-table", "list"]:
             return res([{"name": "rt-firewall-lab"}] if self.table else [])
         if cmd[:3] == ["network", "route-table", "create"]:
@@ -134,7 +154,9 @@ class FakeAzureCLI:
         if cmd[:4] == ["network", "route-table", "route", "create"]:
             self.routes["default-via-firewall"] = {
                 "name": "default-via-firewall", "nextHopIpAddress": "10.0.0.4",
-                "addressPrefix": "0.0.0.0/0"}
+                "nextHopType": "VirtualAppliance", "addressPrefix": "0.0.0.0/0"}
+            return res(self.routes["default-via-firewall"])
+        if cmd[:4] == ["network", "route-table", "route", "show"]:
             return res(self.routes["default-via-firewall"])
         if cmd[:5] == ["network", "firewall", "policy", "rule-collection-group", "list"]:
             return res([{"name": "rcg-web-lab"}] if self.rule_group else [])
@@ -142,14 +164,20 @@ class FakeAzureCLI:
             self.rule_group = True
             return res({"name": "rcg-web-lab"})
         if cmd[:5] == ["network", "firewall", "policy", "rule-collection-group", "show"]:
-            return res({"ruleCollections": [{"name": "allow-google"}] if self.allowed else []})
+            return res({"ruleCollections": [{
+                "name": "allow-google", "action": {"type": "Allow"},
+                "rules": [{"ruleType": "ApplicationRule", "name": "google-https",
+                           "sourceAddresses": ["10.0.2.0/24"],
+                           "targetFqdns": ["www.google.com"],
+                           "protocols": [{"protocolType": "Https", "port": 443}]}]
+            }] if self.allowed else []})
         if cmd[:5] == ["network", "firewall", "policy", "rule-collection-group", "collection"]:
             self.allowed = True
             return res({"name": "allow-google"})
         if cmd[:3] == ["vm", "run-command", "invoke"]:
             google = "exit=0 http=200" if self.allowed else "exit=28 http=000"
-            return res({"value": [{"message": "RESULT host=www.google.com " + google
-                                               + "\nRESULT host=www.microsoft.com exit=28 http=000"}]})
+            return res({"value": [{"message": "RESULT host=www.google.com dns=ok " + google
+                                               + "\nRESULT host=www.microsoft.com dns=ok exit=28 http=000"}]})
         raise AssertionError("Unknown mock command: " + " ".join(cmd))
 
 

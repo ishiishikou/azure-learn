@@ -9,6 +9,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+import verification as check
 
 RG = "rg-firewall-lab"
 LOCATION = "japaneast"
@@ -120,22 +121,23 @@ class AzureLab:
         self.subscription = subscription_id
         self.emit(f"対象サブスクリプション: {match[0].get('name')} ({subscription_id})")
 
+
     def group_exists(self):
-        return str(self.az(["group", "exists", "-n", RG])).lower() == "true"
+        return check.group_exists(self.az(["group", "exists", "-n", RG]))
+
 
     def resources(self) -> list[dict]:
         if not self.group_exists():
             return []
-        result = self.az(["resource", "list", "-g", RG])
-        return result if isinstance(result, list) else []
+        return check.arr(self.az(["resource", "list", "-g", RG]), "リソース一覧")
 
     def status(self) -> str:
-        account = self.az(["account", "show"])
+        account = check.obj(self.az(["account", "show"]), "サブスクリプション")
         lines = [f"サブスクリプション: {account.get('name')} / {account.get('id')}"]
         if not self.group_exists():
             lines.append("学習用リソースグループ: なし（課金リソースなし）")
             return "\n".join(lines)
-        group = self.az(["group", "show", "-n", RG])
+        group = check.obj(self.az(["group", "show", "-n", RG]), "リソースグループ")
         resources = self.resources()
         lines.append(f"リソースグループ: {RG} / タグ {group.get('tags', {}).get(TAG_KEY, '(未設定)')}")
         lines.append(f"リソース数: {len(resources)}")
@@ -145,7 +147,7 @@ class AzureLab:
     def require_owned_group(self):
         if not self.group_exists():
             raise LabError("リソースグループがありません。無料準備から始めてください。")
-        group = self.az(["group", "show", "-n", RG])
+        group = check.obj(self.az(["group", "show", "-n", RG]), "リソースグループ")
         if (group.get("tags") or {}).get(TAG_KEY) != TAG_VALUE:
             raise LabError("管理タグが一致しません。この教材以外のグループを変更しないため処理を中止しました。")
 
@@ -154,7 +156,7 @@ class AzureLab:
             self.emit("学習用リソースグループを作成")
             self.az(["group", "create", "-n", RG, "-l", LOCATION, "--tags", f"{TAG_KEY}={TAG_VALUE}"])
         else:
-            group = self.az(["group", "show", "-n", RG])
+            group = check.obj(self.az(["group", "show", "-n", RG]), "リソースグループ")
             tag = (group.get("tags") or {}).get(TAG_KEY)
             if tag != TAG_VALUE:
                 if self.resources():
@@ -166,8 +168,9 @@ class AzureLab:
 
     def names(self, args: list[str]) -> dict[str, dict]:
         records = self.az(args)
-        if not isinstance(records, list):
-            raise LabError("リソース一覧の形式が不正です。")
+        records = check.arr(records, "リソース一覧")
+        if any(not isinstance(r.get("name"), str) for r in records):
+            raise LabError("一覧に不正なリソース名があります。")
         return {r["name"]: r for r in records}
 
     def prepare_vnet(self):
@@ -210,6 +213,7 @@ class AzureLab:
             raise LabError("Policy のSKUが Basic ではありません。")
         return "Firewall Policy Basic を確認しました（まだFirewall本体はありません）。"
 
+
     def create_firewall(self):
         self.require_owned_group()
         self.prepare_vnet()
@@ -220,6 +224,9 @@ class AzureLab:
                 self.emit(f"課金対象: Public IP {name} を作成")
                 self.az(["network", "public-ip", "create", "-g", RG, "-n", name, "-l", LOCATION,
                          "--sku", "Standard", "--allocation-method", "Static"])
+            pip = check.obj(self.az(["network", "public-ip", "show", "-g", RG, "-n", name]), "Public IP")
+            if check.obj(pip.get("sku"), "Public IP SKU").get("name") != "Standard" or pip.get("publicIPAllocationMethod") != "Static":
+                raise LabError("同名Public IPがStandard/Staticではありません。")
         firewalls = self.names(["network", "firewall", "list", "-g", RG])
         if FW not in firewalls:
             self.emit("課金対象: Azure Firewall Basic を作成（数分かかります）")
@@ -231,11 +238,12 @@ class AzureLab:
                 "--firewall-policy", POLICY,
             ])
         fw = self.az(["network", "firewall", "show", "-g", RG, "-n", FW])
-        if (fw.get("sku") or {}).get("tier") != "Basic":
-            raise LabError("Firewall SKUがBasicではありません。")
-        if not fw.get("ipConfigurations"):
-            raise LabError("FirewallのIP構成がまだ確立されていません。時間を置いて再確認してください。")
-        return "Azure Firewall Basicと2つのPublic IPを確認しました。"
+        policy_id = check.obj(self.az(["network", "firewall", "policy", "show", "-g", RG, "-n", POLICY]), "Policy").get("id")
+        if not isinstance(policy_id, str):
+            raise LabError("Policy IDを取得できません。")
+        ip = check.firewall(fw, policy_id, (PIP_DATA, PIP_MGMT))
+        return f"Azure Firewall Basic、Policy関連付け、Public IP 2つを確認しました。Private IP: {ip}"
+
 
     def create_vm(self):
         self.require_owned_group()
@@ -245,6 +253,7 @@ class AzureLab:
             self.emit("VM用NICを作成（パブリックIPなし）")
             self.az(["network", "nic", "create", "-g", RG, "-n", NIC, "-l", LOCATION,
                      "--vnet-name", VNET, "--subnet", "WorkloadSubnet"])
+        check.nic(self.az(["network", "nic", "show", "-g", RG, "-n", NIC]), NIC, "WorkloadSubnet")
         vms = self.names(["vm", "list", "-g", RG])
         if VM not in vms:
             self.emit("課金対象: Ubuntu VM Standard_B1s を作成")
@@ -252,16 +261,15 @@ class AzureLab:
                      "--nics", NIC, "--image", "Ubuntu2204", "--size", "Standard_B1s",
                      "--storage-sku", "Standard_LRS", "--os-disk-name", DISK,
                      "--admin-username", "azureuser", "--generate-ssh-keys"])
-        self.az(["vm", "show", "-g", RG, "-n", VM])
-        return "Ubuntu VM（パブリックIPなし）を確認しました。"
+        check.vm(self.az(["vm", "show", "-g", RG, "-n", VM]), VM, NIC)
+        return "Ubuntu VM Standard_B1sと想定NICを確認しました（パブリックIPなし）。"
+
 
     def create_route(self):
         self.require_owned_group()
+        policy_id = check.obj(self.az(["network", "firewall", "policy", "show", "-g", RG, "-n", POLICY]), "Policy").get("id")
         fw = self.az(["network", "firewall", "show", "-g", RG, "-n", FW])
-        configurations = fw.get("ipConfigurations") or []
-        if not configurations or not configurations[0].get("privateIPAddress"):
-            raise LabError("FirewallプライベートIPを取得できません。Firewallの準備を確認してください。")
-        ip = configurations[0]["privateIPAddress"]
+        ip = check.firewall(fw, policy_id, (PIP_DATA, PIP_MGMT))
         tables = self.names(["network", "route-table", "list", "-g", RG])
         if ROUTE_TABLE not in tables:
             self.az(["network", "route-table", "create", "-g", RG, "-n", ROUTE_TABLE, "-l", LOCATION])
@@ -271,46 +279,74 @@ class AzureLab:
                      "-n", "default-via-firewall", "--address-prefix", "0.0.0.0/0",
                      "--next-hop-type", "VirtualAppliance", "--next-hop-ip-address", ip])
         else:
-            route = routes["default-via-firewall"]
-            if route.get("nextHopIpAddress") != ip or route.get("addressPrefix") != "0.0.0.0/0":
-                raise LabError("既存UDRとFirewall IPが一致しません。")
-        subnet = self.az(["network", "vnet", "subnet", "show", "-g", RG, "--vnet-name", VNET, "-n", "WorkloadSubnet"])
-        table_id = self.az(["network", "route-table", "show", "-g", RG, "-n", ROUTE_TABLE])["id"]
+            check.route(routes["default-via-firewall"], ip)
+        route = self.az(["network", "route-table", "route", "show", "-g", RG, "--route-table-name", ROUTE_TABLE,
+                          "-n", "default-via-firewall"])
+        check.route(route, ip)
+        subnet = check.obj(self.az(["network", "vnet", "subnet", "show", "-g", RG, "--vnet-name", VNET, "-n", "WorkloadSubnet"]), "VM Subnet")
+        table_id = check.obj(self.az(["network", "route-table", "show", "-g", RG, "-n", ROUTE_TABLE]), "Route Table").get("id")
+        if not isinstance(table_id, str):
+            raise LabError("Route Table IDを取得できません。")
         if (subnet.get("routeTable") or {}).get("id", "").lower() != table_id.lower():
             self.az(["network", "vnet", "subnet", "update", "-g", RG, "--vnet-name", VNET,
                      "-n", "WorkloadSubnet", "--route-table", ROUTE_TABLE])
-        return f"0.0.0.0/0 → Firewall {ip} に転送するUDRを適用しました。"
+        # Verify the final subnet association, not only the update command.
+        latest = check.obj(self.az(["network", "vnet", "subnet", "show", "-g", RG, "--vnet-name", VNET, "-n", "WorkloadSubnet"]), "VM Subnet")
+        if (latest.get("routeTable") or {}).get("id", "").lower() != table_id.lower():
+            raise LabError("VMサブネットにUDRが関連付けられていません。")
+        return f"0.0.0.0/0 → Firewall {ip} へのUDRを検証しました。"
 
-    def test_http(self):
+
+    def test_http(self, *, allow: bool):
         self.require_owned_group()
+        policy = check.obj(self.az(["network", "firewall", "policy", "show", "-g", RG, "-n", POLICY]), "Policy")
+        fw = self.az(["network", "firewall", "show", "-g", RG, "-n", FW])
+        ip = check.firewall(fw, policy.get("id"), (PIP_DATA, PIP_MGMT))
+        groups = self.names(["network", "firewall", "policy", "rule-collection-group", "list",
+                             "-g", RG, "--policy-name", POLICY])
+        if allow:
+            if set(groups) != {RCG}:
+                raise LabError("Firewall Policyのルールグループが想定と違います。")
+            rule_group = self.az(["network", "firewall", "policy", "rule-collection-group", "show",
+                                  "-g", RG, "--policy-name", POLICY, "-n", RCG])
+            check.policy_collection(rule_group, allow=True)
+        elif groups:
+            raise LabError("拒否試験の前提が成立しません。許可ルールを削除した新しい環境が必要です。")
+        route_info = self.az(["network", "nic", "show-effective-route-table", "-g", RG, "-n", NIC])
+        check.effective_route(route_info, ip)
+        self.emit(f"NICの有効経路 0.0.0.0/0 → Firewall {ip} を確認しました。")
         script = (
             "for host in www.google.com www.microsoft.com; do "
+            "if getent ahostsv4 $host >/dev/null 2>&1; then dns=ok; else dns=fail; fi; "
             "code=$(curl -I -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 https://$host); "
-            "rc=$?; echo RESULT host=$host exit=$rc http=$code; done"
+            "rc=$?; echo RESULT host=$host dns=$dns exit=$rc http=$code; done"
         )
-        self.emit("VM内でcurlを実行（Run Command）。ネットワークの反映には時間がかかる場合があります。")
-        result = self.az(["vm", "run-command", "invoke", "-g", RG, "-n", VM,
-                          "--command-id", "RunShellScript", "--scripts", script], timeout=700)
-        messages = result.get("value") or []
-        joined = "\n".join(m.get("message", "") for m in messages)
-        self.emit(joined[-3500:] or "結果が空です。Run Commandの状態を確認してください。")
-        if "RESULT host=" not in joined:
-            raise LabError("curlの結果が読み取れません。VMエージェントやネットワークを確認してください。")
+        self.emit("VM内でcurlを実行。NICの経路とDNSも検査します。")
+        result = check.obj(self.az(["vm", "run-command", "invoke", "-g", RG, "-n", VM,
+                                    "--command-id", "RunShellScript", "--scripts", script], timeout=700), "Run Command")
+        messages = check.arr(result.get("value"), "Run Command応答")
+        joined = "\n".join(str(m.get("message", "")) for m in messages)
+        self.emit(joined[-3500:] or "Run Command結果が空です。")
+        readings = check.curl_results(joined, allow=allow)
+        self.emit(f"通信観測は期待値と一致: {readings}。ただしAzure Firewallの診断ログによる拒否理由の立証は別です。")
         return joined[-3500:]
+
 
     def allow_google(self):
         self.require_owned_group()
         groups = self.names(["network", "firewall", "policy", "rule-collection-group", "list",
                              "-g", RG, "--policy-name", POLICY])
+        if groups and set(groups) != {RCG}:
+            raise LabError("想定外のルールグループが存在します。")
         if RCG not in groups:
             self.emit("Rule Collection Group を作成")
             self.az(["network", "firewall", "policy", "rule-collection-group", "create",
                      "-g", RG, "--policy-name", POLICY, "-n", RCG, "--priority", "200"])
-        group = self.az(["network", "firewall", "policy", "rule-collection-group", "show",
-                         "-g", RG, "--policy-name", POLICY, "-n", RCG])
-        collection_names = [item.get("name") for item in group.get("ruleCollections", [])]
-        if "allow-google" not in collection_names:
-            self.emit("GoogleへのHTTPSだけを許可するApplication Ruleを作成")
+        group = check.obj(self.az(["network", "firewall", "policy", "rule-collection-group", "show",
+                                    "-g", RG, "--policy-name", POLICY, "-n", RCG]), "Rule Collection Group")
+        collections = check.arr(group.get("ruleCollections"), "Rule Collections")
+        if not collections:
+            self.emit("www.google.com:443 のみ許可するApplication Ruleを作成")
             self.az(["network", "firewall", "policy", "rule-collection-group", "collection",
                      "add-filter-collection", "-g", RG, "--policy-name", POLICY,
                      "--rule-collection-group-name", RCG, "--name", "allow-google",
@@ -320,9 +356,8 @@ class AzureLab:
                      "--protocols", "Https=443", "--target-fqdns", "www.google.com"])
         group = self.az(["network", "firewall", "policy", "rule-collection-group", "show",
                          "-g", RG, "--policy-name", POLICY, "-n", RCG])
-        if "allow-google" not in [item.get("name") for item in group.get("ruleCollections", [])]:
-            raise LabError("Rule Collectionが確認できません。")
-        return "www.google.com:443の許可ルールを確認しました。"
+        check.policy_collection(group, allow=True)
+        return "www.google.com:443への許可ルールを詳細まで確認しました。"
 
     def cleanup(self):
         self.require_owned_group()
@@ -353,7 +388,8 @@ class AzureLab:
         actions = {
             "group": self.prepare_group, "vnet": self.prepare_vnet, "policy": self.prepare_policy,
             "firewall": self.create_firewall, "vm": self.create_vm, "route": self.create_route,
-            "deny_test": self.test_http, "allow": self.allow_google, "allow_test": self.test_http,
+             "deny_test": lambda: self.test_http(allow=False), "allow": self.allow_google,
+            "allow_test": lambda: self.test_http(allow=True),
             "status": self.status, "cleanup": self.cleanup,
         }
         if name not in actions:

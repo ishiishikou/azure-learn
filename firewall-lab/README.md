@@ -1,6 +1,19 @@
 # Azure Firewall Basic — iPhone用ハンズオン
 
-iPhone Safariから **ボタンでAzure CLI操作を実行**し、結果を表示する教材です。Notebook (.ipynb) が正本で、同じ教材を Voilà でスマホ向けWeb画面として使います。コードをターミナルへ貼り付ける必要はありません。
+iPhone Safariで使えるAzure Firewall Basicの学習教材です。
+
+**学習の正本は `firewall_hands_on.ipynb` です。** 1操作1セルを基本に、作成とAzureからの再取得を分け、CLIコマンド・その説明・実行結果をセルごとに確認できます。
+
+補助の `mobile_dashboard.ipynb` はVoilàで表示するボタン操作画面です。こちらは自動操作を優先するため、Azureの仕組みを理解したい場合は学習Notebookを先に利用してください。
+
+## 2種類の利用方法
+
+1. **学習用Notebook（推奨）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
+2. **操作補助画面:** `./start.sh` でVoilàを起動し、`mobile_dashboard.ipynb` をボタンUIとして表示します。
+
+いずれもローカルのloopbackにバインドします。Safariからのアクセスには認証済みのHTTPSトンネル／プロキシが必要です。
+
+**Notebookでは「すべて実行」を使わず、セルを順番に実行してください。** 途中から有料操作が含まれ、毎回状態を確認する構成です。
 
 ## 学習内容
 
@@ -23,7 +36,7 @@ iPhone Safariから **ボタンでAzure CLI操作を実行**し、結果を表�
 ## 想定環境と手順
 
 - Windowsホスト上のWSL2またはRDCに接続されたLinux環境（Python 3.10+、Azure CLI 2.75+）。既存のDockerコンテナでも実行できます。
-- 本リポジトリの firewall-lab フォルダで実行してください。
+- 本リポジトリの firewall-lab フォルダで実行してください。学習用Notebookでは `./start-notebook.sh`、ボタン操作画面は `./start.sh` を使用します。
 
 ```sh
 ./start.sh
@@ -40,7 +53,15 @@ iPhone Safariから **ボタンでAzure CLI操作を実行**し、結果を表�
 
 ### Notebookとして実行
 
-Jupyter環境を別途用意した場合は、`firewall_hands_on.ipynb` を開いてセルを順に実行できます。表示される実行パネルは、Voilàと同じ `ui.py` で実装されています。JupyterLab自体はこの教材の必須依存ではありません。
+`./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。JupyterLabが表示するトークン付きURLを、認証済みのトンネル経由で開いてください。
+
+- セルのMarkdownを読んで、なぜその操作が必要なのか確認します。
+- 次のコードセルに実際のAzure CLIコマンドが1個記載されています。
+- 実行したコマンドとJSON出力が同じセルに表示されます。
+- 有料操作は明示のチェックと確認文字列が必要です。
+- 削除後はAzureのgroup existsがfalseであることを確認します。
+
+JupyterLabはスマートフォンでのタップ操作について未検証です。Safariの実機で操作できない場合はVoilàの補助画面を利用してください。
 
 ## 認証
 
@@ -93,3 +114,10 @@ python3 -m venv .venv
 - ローカルのVoilà Web画面には、アクセス制御を担保するHTTPSプロキシ/VPNが必須です。
 
 参考: https://learn.microsoft.com/cli/azure/network/firewall および https://learn.microsoft.com/cli/azure/network/firewall/policy/rule-collection-group/collection
+
+## 検証範囲（2026-11-11）
+
+- 模擬Azure CLIによるライフサイクルのテストを実施しています。
+- 学習NotebookはCLIが1セル1操作を基本とする構造に分解しています。
+- 実際のAzureへのデプロイ、Azure Firewall診断ログ、iPhone Safariの実機操作は未検証です。
+- Sol 6.1の初回独立レビューでは、通信試験の判定、既存リソースの検証、失敗系テストが不足していると指摘されました。これらを改善していますが、**実Azure・iPhoneの実測が揃うまで終了判定はINCOMPLETE**です。

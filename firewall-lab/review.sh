@@ -6,5 +6,5 @@ codex login status || { echo "Codex CLIのサインインが必要です。codex
 MODEL_OPT=()
 if [[ -n "${CODEX_MODEL:-}" ]]; then MODEL_OPT=(-m "$CODEX_MODEL"); fi
 echo "読み取り専用の独立レビューを開始します。Azure操作やファイル変更は行いません。"
-codex -a never exec --sandbox read-only --skip-git-repo-check --ephemeral -C "$PWD" "${MODEL_OPT[@]}" -o /tmp/azure-firewall-review-last-message.md "$(cat REVIEW.md)"
+codex -a never exec --sandbox read-only --skip-git-repo-check --ephemeral -C "$PWD" "${MODEL_OPT[@]}" -o /tmp/azure-firewall-review-last-message.md "$(cat REVIEW.md)" </dev/null
 echo "レビュー結果: /tmp/azure-firewall-review-last-message.md"
