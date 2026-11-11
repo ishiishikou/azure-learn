@@ -32,7 +32,9 @@ section("Azure Firewall Basic — 1操作ずつ学ぶ実機ハンズオン",
 - 通信の検査: GoogleとMicrosoftへのHTTPSを比較
 - 最後に必ず学習リソースを削除
 
-**警告:** Notebookを閉じてもAzure料金は止まりません。Notebookの「すべて実行」は使わないでください。""")
+**警告:** Notebookを閉じてもAzure料金は止まりません。Notebookの「すべて実行」は使わないでください。
+変更・削除コマンドの直前には、共通の安全ガードがAzure CLIでRGの管理タグと最新リソース一覧を確認し、
+実行した追加の読み取りコマンドも出力します。これらは学習上の1操作に対する事前確認です。""")
 step("0-1. Notebookの実行セッションを用意",
      "Python補助機能を読み込むだけでAzure操作は行いません。",
      code="from notebook_helpers import LearningSession\nsession = LearningSession()\nprint('Azure CLIをまだ実行していません')")
@@ -163,18 +165,13 @@ section("10. 学習終了とAzureリソースの削除（必須）",
 step("10-1. 削除対象を一覧表示","教材以外のリソースが混ざった場合は中止してください。",
      code='inventory = session.run("az resource list -g rg-firewall-lab")\nprint("削除候補:", [(r.get("name"), r.get("type")) for r in inventory])')
 step("10-2. 教材用タグを確認","教材用のタグがあることを確認します。",
-     code='owned = session.run("az group show -n rg-firewall-lab")\nassert owned["tags"]["firewallLab"] == "azure-firewall-mobile-handson-v1"')
+     code='owned = session.run("az group show -n rg-firewall-lab")\nif (owned.get("tags") or {}).get("firewallLab") != "azure-firewall-mobile-handson-v1":\n    raise RuntimeError("管理タグが一致しません")')
 step("10-3. 削除承認を入力","DELETE rg-firewall-labと入力するまでは削除できません。Azureの変更はありません。",
      code="session.cleanup_approval()")
-step("10-4. リソースグループを削除","元に戻せません。対象を再確認してください。",
-     code='''allowed = {"vnet-firewall-lab","policy-firewall-lab","fw-firewall-lab","vm-firewall-lab",
-           "nic-firewall-lab","osdisk-firewall-lab","pip-firewall-lab",
-           "pip-firewall-mgmt-lab","rt-firewall-lab"}
-from lab import RESOURCE_TYPES
-assert all(RESOURCE_TYPES.get(r.get("name")) == str(r.get("type", "")).lower()
-           for r in inventory), "教材外のリソース名または種別を検出しました"
-assert session.subscription == session.locked_subscription, "サブスクリプションが固定されていません"
-session.run("az group delete -n rg-firewall-lab --yes", delete=True)''')
+step("10-4. リソースグループを削除",
+     "元に戻せません。実行直前に**共通の安全確認**として管理タグ・現在のリソース一覧をAzureから再取得し、"
+     "教材外のリソースがあれば削除を停止します。実行した確認CLIも出力に表示します。",
+     code='session.run("az group delete -n rg-firewall-lab --yes", delete=True)')
 step("10-5. 削除完了をAzureから確認","falseならグループが存在しません。",
      code='exists = session.run("az group exists -n rg-firewall-lab")\nsession.verify_deleted(exists)')
 

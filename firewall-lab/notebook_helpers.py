@@ -4,8 +4,12 @@ import json
 import os
 import shlex
 import subprocess
+import threading
 import ipywidgets as widgets
 from IPython.display import display
+
+
+LOGIN_TIMEOUT_SECONDS = 900
 
 
 class LearningSession:
@@ -28,17 +32,28 @@ class LearningSession:
             command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, bufsize=1
         )
+        expired = threading.Event()
+        def expire():
+            if proc.poll() is None:
+                expired.set()
+                proc.kill()
+        watchdog = threading.Timer(LOGIN_TIMEOUT_SECONDS, expire)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             for line in proc.stdout:
                 print(line.rstrip(), flush=True)
-            ret = proc.wait(timeout=900)
-        except Exception:
-            proc.kill()
-            proc.wait()
-            raise
-        if ret:
-            raise RuntimeError("Azure CLI認証に失敗しました。")
-        return ret
+            ret = proc.wait()
+            if expired.is_set():
+                raise TimeoutError("Azure CLIのデバイス認証が期限内に終わりませんでした。")
+            if ret:
+                raise RuntimeError("Azure CLI認証に失敗しました。")
+            return ret
+        finally:
+            watchdog.cancel()
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
 
     def select_subscription(self, subscriptions):
         if self.locked_subscription:
@@ -78,12 +93,95 @@ class LearningSession:
         )
         display(self.delete_phrase)
 
+    def _preflight(self, args: list[str]):
+        """Mandatory read-only Azure checks before every resource change.
+
+        This code is shared by JupyterLab and Voilà, so an operator cannot
+        skip a separate inspection cell and bypass the ownership check.
+        The checks are printed for transparency: the lesson still has one
+        intended *modifying* Azure CLI command per step.
+        """
+        from lab import AzureLab, RG, TAG_KEY, TAG_VALUE, is_known_lab_resource
+
+        mutating = any(verb in args for verb in (
+            "create", "update", "delete", "add-filter-collection", "invoke"
+        ))
+        if not mutating:
+            return
+
+        if not self.locked_subscription:
+            raise RuntimeError("対象サブスクリプションが固定されていません。")
+        command = args[1:]
+        if command[:1] not in (["network"], ["vm"], ["group"]):
+            raise RuntimeError("教材が許可していないAzure操作です。")
+        rg_arg = "-g" if "-g" in command else "--resource-group" if "--resource-group" in command else None
+        if command[:1] == ["group"]:
+            if command[:2] not in (["group", "create"], ["group", "update"], ["group", "delete"]):
+                raise RuntimeError("教材外のリソースグループ操作です。")
+            name_arg = "-n" if "-n" in command else "--name" if "--name" in command else None
+            if name_arg is None or command[command.index(name_arg) + 1] != RG:
+                raise RuntimeError("学習用リソースグループ以外は操作できません。")
+        elif rg_arg is None or command[command.index(rg_arg) + 1] != RG:
+            raise RuntimeError("学習用リソースグループ以外は操作できません。")
+
+        lab = AzureLab(self.locked_subscription)
+        subscription = self.locked_subscription
+        print("[安全確認: 読み取り専用Azure CLIを追加実行]", flush=True)
+
+        if command[:2] == ["group", "create"]:
+            print("$ az group exists -n", RG, "--subscription", subscription, flush=True)
+            if lab.group_exists():
+                raise RuntimeError(
+                    "同名のリソースグループがすでに存在します。"
+                    "作成を飛ばして、所有タグ・リソース一覧を確認してください。"
+                )
+            print("結果: 学習用RGが存在しないことを確認しました。", flush=True)
+            return
+
+        print("$ az group exists -n", RG, "--subscription", subscription, flush=True)
+        if not lab.group_exists():
+            raise RuntimeError("学習用RGが存在しません。先に準備してください。")
+
+        print("$ az group show -n", RG, "--subscription", subscription, flush=True)
+        group = lab.az(["group", "show", "-n", RG])
+        tags = group.get("tags") if isinstance(group, dict) else None
+
+        print("$ az resource list -g", RG, "--subscription", subscription, flush=True)
+        resources = lab.resources()
+
+        if command[:2] == ["group", "update"]:
+            # An existing empty RG may have been prepared before this notebook.
+            # Do not seize ownership of a populated, unrelated RG.
+            if resources:
+                raise RuntimeError("既存リソースを持つRGへの教材タグ付与は許可しません。")
+            print("結果: 空のRGを確認しました。教材管理タグのみ付与できます。", flush=True)
+            return
+
+        if not isinstance(tags, dict) or tags.get(TAG_KEY) != TAG_VALUE:
+            raise RuntimeError("学習用RGの管理タグが一致しません。変更・削除を中止します。")
+
+        unknown = [x for x in resources if not is_known_lab_resource(x)]
+        if unknown:
+            raise RuntimeError(
+                "教材外のリソースを検出したため、変更・削除を中止しました: "
+                + ", ".join(str(x.get("name")) for x in unknown)
+            )
+        print("結果: 管理タグ一致。リソース",
+              len(resources), "件すべて教材の許可リスト内です。", flush=True)
+
     def run(self, command: str, *, paid=False, delete=False, scoped=True):
         if not isinstance(command, str):
             raise TypeError("コマンドは文字列で指定してください。")
         args = shlex.split(command)
         if not args or args[0] != "az":
             raise ValueError("Azure CLIのコマンドを1つだけ指定してください。")
+        if "--subscription" in args or "--output" in args or "--only-show-errors" in args:
+            raise RuntimeError("サブスクリプション・出力形式は教材側で固定します。")
+        if args[1:3] == ["group", "delete"] and not delete:
+            raise RuntimeError("グループ削除はdelete=Trueと明示承認が必要です。")
+        if not scoped and any(verb in args for verb in
+                              ("create", "update", "delete", "add-filter-collection", "invoke")):
+            raise RuntimeError("Azureの変更操作にscoped=Falseは使用できません。")
         if scoped:
             if self.picker is None or not self.picker.value:
                 raise RuntimeError("先にサブスクリプションを選択してください。")
@@ -102,6 +200,9 @@ class LearningSession:
         if delete and not (self.delete_phrase is not None
                            and self.delete_phrase.value.strip() == "DELETE rg-firewall-lab"):
             raise RuntimeError("削除するには DELETE rg-firewall-lab を入力してください。")
+        # A failed preflight blocks the real Azure mutation in both UIs.
+        if scoped:
+            self._preflight(args)
         if "--output" not in args and "-o" not in args:
             args += ["--output", "json"]
         args += ["--only-show-errors"]

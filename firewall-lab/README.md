@@ -38,9 +38,25 @@ Policy、Public IP、Route TableはVNetのサブネット内に配置するリ�
 
 通常のセル編集を希望する場合は、PC向けの `firewall_hands_on.ipynb` をJupyterLabで開いてください。
 
+### 両画面共通の安全確認（Solレビュー対応）
+
+Azureリソースの変更・削除コマンドを実行する直前に、共通モジュール `notebook_helpers.py` が**Azure CLIで読み取り専用の事前検査**を実行します。
+
+- 選択済みのサブスクリプションを固定し、途中で別契約へ変更されたら拒否
+- 教材以外のリソースグループを操作しない
+- 同名RGの新規作成は、RGが存在しないときだけ許可
+- 既存RGへの教材管理タグ付与は、RGが空であるときだけ許可
+- その後の作成・更新・削除は、管理タグ一致かつリソース名・種類が教材の許可リスト内に限る
+- 削除直前もAzureから**最新のタグ・リソース一覧**を再取得し、以前の結果や `assert` のみには依存しない
+- 追加で実行した安全確認用Azure CLIコマンドと結果もセル/画面の出力へ表示
+
+従って、学習用Notebookの「1操作1セル」は**変更対象のCLIコマンド**の単位です。安全確保のため読み取り専用コマンドが自動で加わります。正式なAzure環境での一連のデプロイ・検証・削除は未実施です。
+
+スマートフォン版はリポジトリ内の信頼できるNotebookコードセルをPythonカーネルで実行します。未検証のNotebookをこのサーバーに置かないでください。
+
 ## 起動方法
 
-1. **学習用Notebook（推奨）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
+1. **学習用Notebook（PC向け）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
 2. **操作補助画面:** `./start.sh` でVoilàを起動し、`mobile_dashboard.ipynb` をボタンUIとして表示します。
 
 いずれもローカルのloopbackにバインドします。Safariからのアクセスには認証済みのHTTPSトンネル／プロキシが必要です。

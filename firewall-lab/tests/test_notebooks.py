@@ -52,6 +52,7 @@ def test_paid_command_requires_consent(monkeypatch):
     assert calls == []
     s.paid_checkbox = widgets.Checkbox(value=True)
     s.paid_phrase = widgets.Text(value="CREATE BILLABLE")
+    monkeypatch.setattr(LearningSession, "_preflight", lambda *_: None)
     assert s.run("az network firewall create -g rg-firewall-lab", paid=True) == {"ok": True}
     argv = calls[0][0]
     assert argv[0] == "az"
@@ -106,7 +107,7 @@ def test_subscription_switch_after_any_cli_is_blocked(monkeypatch):
     session.run("az resource list -g rg-firewall-lab")
     session.picker.value = "subscription-b"
     with pytest.raises(RuntimeError, match="変更されました"):
-        session.run("az group delete -n rg-firewall-lab --yes")
+        session.run("az resource list -g rg-firewall-lab")
     assert len(calls) == 1
 
 

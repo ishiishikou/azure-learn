@@ -36,6 +36,14 @@ def steps_from_notebook(path: Path = CANONICAL_NOTEBOOK) -> list[dict]:
         if text.startswith("## "):
             section = text.splitlines()[0].removeprefix("## ").strip()
             section_note = text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
+            # Reflection-only chapters are pages, not Azure operations.
+            if section.startswith("9."):
+                steps.append({
+                    "index": len(steps), "section": section,
+                    "section_note": section_note,
+                    "title": section, "purpose": section_note,
+                    "code": "", "paid": False, "delete": False, "note": True,
+                })
         elif text.startswith("### "):
             if i + 1 >= len(notebook.cells) or notebook.cells[i + 1].cell_type != "code":
                 raise ValueError(f"Explanatory step {i} has no following code cell")
@@ -178,14 +186,26 @@ def make_mobile_learning_app():
                 + html.escape(step["title"]) + "</div>"
             )
             section_note = step["section_note"]
+            chapter_details = (
+                "<details class='lab-muted'><summary>この章の説明・注意点を見る</summary>"
+                "<div class='lab-explanation'><p>" + _rich(step["section_note"])
+                + "</p></div></details>"
+                if step["section_note"] and not step.get("note") else ""
+            )
             intro.value = (
                 "<div class='lab-subsection'>" + html.escape(step["section"]) + "</div>"
                 + ("<div class='lab-explanation'><p>" + _rich(step["purpose"]) + "</p></div>")
+                + chapter_details
             )
             command.value = (
-                "<div class='lab-mini-title'>実行するコード / Azure CLI</div>"
-                "<div class='lab-muted'>何が実行されるかを確認してからボタンを押します。</div>"
-                "<pre class='lab-code'><code>" + html.escape(step["code"]) + "</code></pre>"
+                "<div class='lab-mini-title'>このページは説明のみです</div>"
+                if step.get("note") else (
+                    "<div class='lab-mini-title'>実行するコード / Azure CLI</div>"
+                    "<div class='lab-muted'>何が実行されるかを確認してからボタンを押します。</div>"
+                    "<pre class='lab-code'><code>" + html.escape(step["code"]) + "</code></pre>"
+                    "<div class='lab-muted'>変更・削除時には管理タグなどを確認する読み取りCLIが"
+                    "安全のため追加実行されます。出力欄にそのコマンドと結果を表示します。</div>"
+                )
             )
             is_paid_step = step["paid"] or step["code"].strip() == "session.approvals()"
             is_delete_step = step["delete"] or step["code"].strip() == "session.cleanup_approval()"
@@ -193,13 +213,19 @@ def make_mobile_learning_app():
             delete_box.layout.display = "flex" if is_delete_step else "none"
             button_run.button_style = ("danger" if step["delete"] else
                                        "warning" if step["paid"] else "primary")
-            button_run.description = ("削除を実行" if step["delete"] else
+            button_run.description = ("学習メモ（実行なし）" if step.get("note") else
+                                      "削除を実行" if step["delete"] else
                                       "この有料操作を実行" if step["paid"] else
                                       "この操作を実行")
+            button_run.disabled = bool(step.get("note"))
             button_prev.disabled = index == 0
             button_next.disabled = index == len(steps) - 1
-            result.value = result_memory.get(index, "このステップは未実行です。")
-            state.value = ("<span class='lab-ok'>完了</span>" if index in completed
+            result.value = result_memory.get(
+                index, "操作はありません。内容を確認し、次へ進んでください。"
+                if step.get("note") else "このステップは未実行です.")
+            state.value = ("<span class='lab-muted'>読むだけのステップ</span>"
+                           if step.get("note") else
+                           "<span class='lab-ok'>完了</span>" if index in completed
                            else "<span class='lab-status'>未実行</span>")
         finally:
             changing[0] = False
@@ -228,14 +254,25 @@ def make_mobile_learning_app():
             ["az", "login", "--use-device-code", "--only-show-errors"],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
         )
+        expired = threading.Event()
+        def expire():
+            if p.poll() is None:
+                expired.set()
+                p.kill()
+        watchdog = threading.Timer(900, expire)
+        watchdog.daemon = True
+        watchdog.start()
         try:
             for line in p.stdout:
                 if "accessToken" not in line and "refreshToken" not in line:
                     append_log(line.rstrip()[:900])
-            rc = p.wait(timeout=900)
+            rc = p.wait()
+            if expired.is_set():
+                raise TimeoutError("Azureデバイス認証が期限内に終了しませんでした。")
             if rc:
                 raise RuntimeError(f"Azureログインが終了コード{rc}で失敗しました。")
         finally:
+            watchdog.cancel()
             if p.poll() is None:
                 p.kill()
                 p.wait()
@@ -257,6 +294,7 @@ def make_mobile_learning_app():
                 accounts = session.run("az account list --all", scoped=False)
             if not isinstance(accounts, list):
                 raise RuntimeError("Azure CLIから契約一覧を取得できません。")
+            append_log(capture.getvalue()[-8000:])
             namespace["accounts"] = accounts
             valid = [(str(item.get("name")) + " / " + str(item.get("id")),
                       item.get("id"))
@@ -289,23 +327,6 @@ def make_mobile_learning_app():
                 raise RuntimeError("DELETE rg-firewall-lab と正確に入力してください。")
             append_log("削除の確認欄を入力済みです。削除処理はまだ実行していません。")
             return
-        if step["delete"]:
-            # Re-read Azure state immediately before deletion; don't trust old
-            # inventory snapshots from a previous cell or browser interaction.
-            from lab import AzureLab, RESOURCE_TYPES
-            if not session.locked_subscription:
-                raise RuntimeError("対象サブスクリプションが固定されていません。")
-            verifier = AzureLab(session.locked_subscription)
-            verifier.require_owned_group()
-            unexpected = [
-                r for r in verifier.resources()
-                if RESOURCE_TYPES.get(r.get("name")) != str(r.get("type", "")).lower()
-            ]
-            if unexpected:
-                raise RuntimeError(
-                    "教材以外のリソースがあるため削除を中止しました。"
-                    + ", ".join(str(x.get("name")) for x in unexpected)
-                )
         stream = io.StringIO()
         try:
             with contextlib.redirect_stdout(stream):
@@ -339,7 +360,7 @@ def make_mobile_learning_app():
                 result_memory[idx] = result.value
                 state.value = ("<span class='lab-ok'>完了</span>" if succeeded
                                else "<span class='lab-error'>失敗 / 要確認</span>")
-                button_run.disabled = False
+                button_run.disabled = bool(step.get("note"))
                 button_next.disabled = idx == len(steps) - 1
                 button_prev.disabled = idx == 0
                 step_picker.disabled = False

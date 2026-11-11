@@ -44,6 +44,26 @@ RESOURCE_TYPES = {
 MAX_COMMAND_SECONDS = 1200
 
 
+def is_known_lab_resource(resource: dict) -> bool:
+    """Fail closed if a lab RG contains resources outside this exercise."""
+    if not isinstance(resource, dict):
+        return False
+    name = resource.get("name", "")
+    typ = str(resource.get("type", "")).lower()
+    if RESOURCE_TYPES.get(name) == typ:
+        return True
+    if typ == "microsoft.network/firewallpolicies/rulecollectiongroups":
+        return name == POLICY + "/" + RCG
+    # VM Run Command can leave nested extension resources.
+    return (
+        typ in {
+            "microsoft.compute/virtualmachines/extensions",
+            "microsoft.compute/virtualmachines/runcommands",
+        }
+        and isinstance(name, str) and name.startswith(VM + "/")
+    )
+
+
 class LabError(RuntimeError):
     pass
 
@@ -362,19 +382,9 @@ class AzureLab:
     def cleanup(self):
         self.require_owned_group()
         resources = self.resources()
-        def known_resource(resource):
-            name = resource.get("name", "")
-            typ = resource.get("type", "").lower()
-            if RESOURCE_TYPES.get(name) == typ:
-                return True
-            # VM Run Command may create a nested extension resource.
-            return (typ in {
-                "microsoft.compute/virtualmachines/extensions",
-                "microsoft.compute/virtualmachines/runcommands",
-            } and name.startswith(VM + "/"))
         unexpected = [
             f"{r.get('name')} ({r.get('type')})"
-            for r in resources if not known_resource(r)
+            for r in resources if not is_known_lab_resource(r)
         ]
         if unexpected:
             raise LabError("教材外の可能性があるリソースを検出したため削除を止めました: " + ", ".join(unexpected))
