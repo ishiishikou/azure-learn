@@ -1,0 +1,5 @@
+voila>=0.5.13,<0.6
+ipywidgets>=8.1,<9
+ipykernel>=7,<8
+nbformat>=5.10,<6
+pytest>=9,<10
