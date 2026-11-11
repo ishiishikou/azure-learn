@@ -120,3 +120,36 @@ def test_shared_login_watchdog_terminates_silent_child(monkeypatch):
     monkeypatch.setattr(notebook_helpers, "LOGIN_TIMEOUT_SECONDS", 0.15)
     with pytest.raises(TimeoutError, match="期限内"):
         LearningSession().login()
+
+
+def test_legacy_azurelab_dashboard_rejects_unknown_resource_before_create():
+    fake = FakeAzureCLI()
+    fake.group = fake.tagged = True
+    fake.resources["outside"] = {
+        "name": "outside", "type": "Microsoft.Storage/storageAccounts"
+    }
+    client = lab.AzureLab("sub-test", executor=fake)
+    with pytest.raises(lab.LabError, match="教材外"):
+        client.prepare_vnet()
+    assert not fake.vnet
+    assert not any(x[1:4] == ["network", "vnet", "create"] for x in fake.calls)
+
+
+def test_legacy_azurelab_dashboard_rejects_tag_takeover():
+    fake = FakeAzureCLI()
+    fake.group = True
+    fake.resources["outside"] = {
+        "name": "outside", "type": "Microsoft.Storage/storageAccounts"
+    }
+    client = lab.AzureLab("sub-test", executor=fake)
+    with pytest.raises(lab.LabError, match="既存リソース"):
+        client.prepare_group()
+    assert not fake.tagged
+
+
+def test_legacy_azurelab_az_rejects_wrong_resource_group():
+    fake = FakeAzureCLI()
+    fake.group = fake.tagged = True
+    client = lab.AzureLab("sub-test", executor=fake)
+    with pytest.raises(lab.LabError, match="教材外"):
+        client.az(["network", "vnet", "create", "-g", "other-rg", "-n", "test"])

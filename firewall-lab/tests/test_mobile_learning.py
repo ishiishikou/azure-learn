@@ -19,13 +19,15 @@ def test_mobile_ui_reads_exact_canonical_learning_steps():
         if c.cell_type == "markdown" and c.source.startswith("### ")
     ]
     assert len(original_code) == 42
-    assert len(steps) == 43  # 42 commands plus the read-only reflection page
+    assert len(steps) == 44  # 42 commands + reflection + completion notes
     assert [s["code"] for s in steps if not s.get("note")] == original_code
     assert any(s.get("note") and s["section"].startswith("9.") for s in steps)
+    assert any(s.get("note") and s["section"].startswith("復習") for s in steps)
+    assert "Notebookを閉じてもAzure料金は止まりません" in steps[0]["section_note"]
     assert sum(s["paid"] for s in steps) >= 10
     assert sum(s["delete"] for s in steps) == 1
     assert "az network vnet create" in " ".join(s["code"] for s in steps)
-    assert "az group delete" in steps[-2]["code"]
+    assert sum("az group delete" in step["code"] for step in steps) == 1
 
 
 def test_mobile_ui_open_does_not_execute_azure_cli(monkeypatch):
@@ -42,7 +44,7 @@ def test_mobile_ui_open_does_not_execute_azure_cli(monkeypatch):
     assert isinstance(app, w.VBox)
     visible_buttons = [x for x in app.children if isinstance(x, w.Button)]
     assert any("実行" in b.description for b in visible_buttons)
-    assert any(isinstance(x, w.IntProgress) and x.max == 43 for x in app.children)
+    assert any(isinstance(x, w.IntProgress) and x.max == 44 for x in app.children)
 
 
 def test_mobile_ui_does_not_run_code_not_in_the_notebook():
@@ -57,3 +59,14 @@ def test_html_explanations_are_escaped():
     assert "<script>" not in rendered
     assert "&lt;script&gt;" in rendered
     assert "<strong>Azure</strong>" in rendered
+
+
+def test_widget_stdout_streams_complete_lines():
+    logged = []
+    writer = mobile_learning._WidgetStream(logged.append)
+    writer.write("az group ")
+    assert logged == []
+    writer.write("exists\nnext")
+    assert logged == ["az group exists"]
+    writer.flush()
+    assert logged == ["az group exists", "next"]

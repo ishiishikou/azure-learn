@@ -29,6 +29,7 @@ def steps_from_notebook(path: Path = CANONICAL_NOTEBOOK) -> list[dict]:
     steps = []
     section = "0. はじめに"
     section_note = ""
+    opening_note = ""
     for i, cell in enumerate(notebook.cells):
         if cell.cell_type != "markdown":
             continue
@@ -36,8 +37,10 @@ def steps_from_notebook(path: Path = CANONICAL_NOTEBOOK) -> list[dict]:
         if text.startswith("## "):
             section = text.splitlines()[0].removeprefix("## ").strip()
             section_note = text.split("\n\n", 1)[1].strip() if "\n\n" in text else ""
-            # Reflection-only chapters are pages, not Azure operations.
-            if section.startswith("9."):
+            if not steps and section.startswith("Azure Firewall Basic"):
+                opening_note = section_note
+            # Reflection and completion chapters are read-only learning pages.
+            if section.startswith("9.") or section.startswith("復習"):
                 steps.append({
                     "index": len(steps), "section": section,
                     "section_note": section_note,
@@ -53,6 +56,7 @@ def steps_from_notebook(path: Path = CANONICAL_NOTEBOOK) -> list[dict]:
             compile(code, f"<learning-step-{i}>", "exec")
             if title.startswith("0-"):
                 section = "0. はじめに"
+                section_note = opening_note
             steps.append({
                 "index": len(steps),
                 "section": section,
@@ -73,6 +77,29 @@ def _rich(text: str) -> str:
     escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped, flags=re.S)
     escaped = re.sub(r"\`([^\`]+)\`", r"<code>\1</code>", escaped)
     return escaped.replace("\n\n", "</p><p>").replace("\n", "<br>")
+
+
+class _WidgetStream(io.TextIOBase):
+    """Forward stdout to a widget as complete lines; no long-running buffer."""
+    def __init__(self, consumer):
+        super().__init__()
+        self.consumer = consumer
+        self.partial = ""
+
+    def write(self, data):
+        if not isinstance(data, str):
+            data = str(data)
+        self.partial += data
+        if "\n" in self.partial:
+            full, _, self.partial = self.partial.rpartition("\n")
+            if full:
+                self.consumer(full)
+        return len(data)
+
+    def flush(self):
+        if self.partial:
+            self.consumer(self.partial)
+            self.partial = ""
 
 
 def make_mobile_learning_app():
@@ -327,14 +354,12 @@ def make_mobile_learning_app():
                 raise RuntimeError("DELETE rg-firewall-lab と正確に入力してください。")
             append_log("削除の確認欄を入力済みです。削除処理はまだ実行していません。")
             return
-        stream = io.StringIO()
+        stream = _WidgetStream(append_log)
         try:
             with contextlib.redirect_stdout(stream):
                 exec(compile(code, "<trusted-learning-notebook>", "exec"), namespace)
         finally:
-            content = stream.getvalue()
-            if content:
-                append_log(content)
+            stream.flush()
 
     def run_action(_):
         if not nav_lock.acquire(blocking=False):

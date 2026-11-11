@@ -118,9 +118,57 @@ class AzureLab:
     def emit(self, message: str):
         self.log(message)
 
+    def _preflight_mutation(self, args: list[str]):
+        """Protect the older one-click dashboard path as well as direct AzureLab use.
+
+        This is distinct from the LearningSession guard, because AzureLab
+        internally invokes multiple Azure CLI commands per action.
+        """
+        if not any(verb in args for verb in
+                   ("create", "update", "delete", "add-filter-collection", "invoke")):
+            return
+        if not self.subscription:
+            raise LabError("変更対象のサブスクリプションが未選択です。")
+        if args[:1] not in (["group"], ["network"], ["vm"]):
+            raise LabError("教材外のAzure変更操作です。")
+        if args[:1] == ["group"]:
+            if args[:2] not in (["group", "create"], ["group", "update"], ["group", "delete"]):
+                raise LabError("教材外のグループ変更操作です。")
+            name_flag = "-n" if "-n" in args else "--name" if "--name" in args else None
+            if name_flag is None or args[args.index(name_flag) + 1] != RG:
+                raise LabError("教材外のリソースグループを変更できません。")
+        else:
+            group_flag = "-g" if "-g" in args else "--resource-group" if "--resource-group" in args else None
+            if group_flag is None or args[args.index(group_flag) + 1] != RG:
+                raise LabError("教材外のリソースグループを変更できません。")
+
+        if args[:2] == ["group", "create"]:
+            if self.group_exists():
+                raise LabError("同名のRGがすでに存在します。既存グループの内容を確認してください。")
+            return
+
+        if not self.group_exists():
+            raise LabError("学習用リソースグループが存在しません。")
+        group = check.obj(self.az(["group", "show", "-n", RG]), "学習用RG")
+        resources = check.arr(self.az(["resource", "list", "-g", RG]), "学習用RGリソース")
+        if args[:2] == ["group", "update"]:
+            if resources:
+                raise LabError("リソースがあるRGには教材タグを追加しません。")
+            return
+        if (group.get("tags") or {}).get(TAG_KEY) != TAG_VALUE:
+            raise LabError("管理タグが一致しないため変更を中止しました。")
+        unexpected = [r for r in resources if not is_known_lab_resource(r)]
+        if unexpected:
+            raise LabError(
+                "教材外のリソースがあるため変更・削除を中止しました: "
+                + ", ".join(str(r.get("name")) for r in unexpected)
+            )
+
     def az(self, args: list[str], *, scoped: bool = True, timeout: int = MAX_COMMAND_SECONDS):
         if scoped and not self.subscription:
             raise LabError("サブスクリプションが未選択です。")
+        if scoped:
+            self._preflight_mutation(args)
         result = run_cli(args, subscription=self.subscription if scoped else None, timeout=timeout, executor=self.executor)
         output = result.stdout.strip()
         try:

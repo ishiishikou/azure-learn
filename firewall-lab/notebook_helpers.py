@@ -147,7 +147,10 @@ class LearningSession:
         tags = group.get("tags") if isinstance(group, dict) else None
 
         print("$ az resource list -g", RG, "--subscription", subscription, flush=True)
-        resources = lab.resources()
+        from verification import arr
+        resources = arr(lab.az(["resource", "list", "-g", RG]), "学習用RGリソース")
+        print("取得したリソース:",
+              [(r.get("name"), r.get("type")) for r in resources], flush=True)
 
         if command[:2] == ["group", "update"]:
             # An existing empty RG may have been prepared before this notebook.
