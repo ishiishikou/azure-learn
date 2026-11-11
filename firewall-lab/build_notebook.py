@@ -21,7 +21,9 @@ def step(title, purpose, command=None, *, paid=False, code=None):
     learning.cells.append(nb.v4.new_code_cell(code))
 
 section("Azure Firewall Basic — 1操作ずつ学ぶ実機ハンズオン",
-"""操作の中身を隠さない学習用Notebookです。原則1コードセルにつき1つのAzure CLIコマンドを実行します。
+"""**iPhone版:** [スマートフォン向け学習画面を開く](/voila/render/mobile_learning.ipynb)。コマンドと結果を1操作ずつ確認できます。
+
+操作の中身を隠さない学習用Notebookです。原則1コードセルにつき1つのAzure CLIコマンドを実行します。
 コマンドは実行直前に、指定したサブスクリプションIDを含めて表示されます。
 
 - 無料の準備: リソースグループ・VNet・Firewall Policy
@@ -206,3 +208,20 @@ nb.validate(dashboard)
 nb.write(dashboard,folder/"mobile_dashboard.ipynb")
 print("learning notebook",len(learning.cells),"cells")
 print("mobile dashboard",len(dashboard.cells),"cells")
+
+# Smartphone-first educational app: every button corresponds to ONE canonical
+# learning-notebook cell, with visible code, rationale, and output.
+mobile_learning = nb.v4.new_notebook(cells=[
+    nb.v4.new_markdown_cell(
+        "# Azure Firewall Basic — スマートフォン版\n\n"
+        "このページはVoilàによりスマホ向けUIで表示します。"
+        "実際の操作内容はfirewall_hands_on.ipynbの各コードセルと共通です。"
+        "画面表示だけではAzureのリソースは作成しません。"
+    ),
+    nb.v4.new_code_cell("from mobile_learning import make_mobile_learning_app\nmake_mobile_learning_app()"),
+])
+mobile_learning.metadata["kernelspec"] = learning.metadata["kernelspec"]
+mobile_learning.metadata["language_info"] = learning.metadata["language_info"]
+nb.validate(mobile_learning)
+nb.write(mobile_learning, folder / "mobile_learning.ipynb")
+print("mobile_learning notebook", len(mobile_learning.cells), "cells")

@@ -22,9 +22,23 @@ iPhone Safariで使えるAzure Firewall Basicの学習教材です。
 
 Policy、Public IP、Route TableはVNetのサブネット内に配置するリソースではないため、図ではリソースグループ内のVNet外に分離しています。
 
-> iPhoneからの安全な接続方法は [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) を参照してください。RDCコンテナにはTailscaleをインストールしてuserspaceモードで起動済みです。ログイン、Serve、Safari接続は別途確認します。
+> iPhoneからの安全な接続方法は [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) を参照してください。RDCコンテナへのTailscaleインストール、Serve有効化、iPhone SafariからのJupyterLab表示を確認済みです。
 
-## 2種類の利用方法
+## iPhone向け学習画面（推奨）
+
+**[スマホ学習UIを開く](/voila/render/mobile_learning.ipynb)**
+
+- ファイル：`mobile_learning.ipynb`、表示ロジック：`mobile_learning.py`
+- 学習用Notebook `firewall_hands_on.ipynb` から42のコードセルを読み出し、1操作ずつ表示します。
+- iPhone幅に合わせた縦長画面で、目的・コマンド・実行ボタン・出力・前へ／次へを表示します。
+- Azureサブスクリプションを選択し、途中で変更された場合は操作を拒否します。
+- 有料操作と削除には確認文言を要求し、画面を開くだけでAzureを変更することはありません。
+- JupyterLabのVoilà拡張を利用するため、**Tailscale Serveは既存の443→8888のままで使えます**。追加の外部公開ポートは不要です。
+- 以前の `mobile_dashboard.ipynb` は一括実行用の補助画面であり、学習の中心ではありません。
+
+通常のセル編集を希望する場合は、PC向けの `firewall_hands_on.ipynb` をJupyterLabで開いてください。
+
+## 起動方法
 
 1. **学習用Notebook（推奨）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
 2. **操作補助画面:** `./start.sh` でVoilàを起動し、`mobile_dashboard.ipynb` をボタンUIとして表示します。
