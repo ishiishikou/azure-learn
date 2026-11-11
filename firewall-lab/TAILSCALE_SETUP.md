@@ -72,6 +72,25 @@ tailscale --socket=/tmp/tailscale-lab.sock serve status
 
 JupyterLabのトークン認証も有効のまま使用します。トークンは秘密情報なのでGitHubやチャットに不用意に貼りません。
 
+## JupyterLabの403 Forbiddenについて（実測済み）
+
+Tailscale ServeからJupyterLabへ転送すると、HTTPのHostヘッダーが
+`azure-firewall-lab.tailbe0592.ts.net`になります。Jupyter Serverはデフォルトで非ローカルHostを拒否するため、
+このホスト名を知らない状態では403を返します。RDC上で再現しました。
+
+`start-notebook.sh` に次の引数を追加済みです。
+
+```sh
+--ServerApp.local_hostnames='["localhost","azure-firewall-lab.tailbe0592.ts.net"]' \
+--ServerApp.allow_remote_access=False
+```
+
+**`allow_remote_access=True`、`disable_check_xsrf=True`、認証無効化は行いません。**
+依然として `127.0.0.1:8888` のループバック待受けとJupyterトークン認証が必要です。
+
+実測：Host `azure-firewall-lab.tailbe0592.ts.net` のGETは302ログイン画面への転送、
+不明なHostでのGETは403。iPhone Safariでの最終確認は別途必要です。
+
 ## 5. iPhone側の操作
 
 1. iPhoneにTailscaleアプリをApp Storeからインストール

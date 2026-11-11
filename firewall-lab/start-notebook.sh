@@ -9,4 +9,9 @@ if [ ! -d .venv ]; then python3 -m venv .venv; fi
 .venv/bin/python -m pip install -q -r requirements.txt
 .venv/bin/python build_notebook.py
 echo "JupyterLabはローカルの127.0.0.1で待ち受けます。ログイン用トークン付きURLを確認してください。"
-exec .venv/bin/jupyter lab --allow-root --no-browser --ip=127.0.0.1 --port="${JUPYTER_PORT:-8888}" --ServerApp.root_dir="$(pwd)"
+# Restrict accepted Host headers to localhost and this private Tailscale Serve name.
+# Keep DNS rebinding protection, token login, and the loopback-only listener.
+exec .venv/bin/jupyter lab --allow-root --no-browser --ip=127.0.0.1 --port="${JUPYTER_PORT:-8888}" \
+  --ServerApp.root_dir="$(pwd)" \
+  --ServerApp.local_hostnames='["localhost","azure-firewall-lab.tailbe0592.ts.net"]' \
+  --ServerApp.allow_remote_access=False

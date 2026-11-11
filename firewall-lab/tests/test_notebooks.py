@@ -108,3 +108,12 @@ def test_subscription_switch_after_any_cli_is_blocked(monkeypatch):
     with pytest.raises(RuntimeError, match="変更されました"):
         session.run("az group delete -n rg-firewall-lab --yes")
     assert len(calls) == 1
+
+
+def test_jupyter_stays_local_and_accepts_only_known_tailnet_host():
+    launcher = (ROOT / "start-notebook.sh").read_text()
+    assert "--ip=127.0.0.1" in launcher
+    assert "--ServerApp.allow_remote_access=False" in launcher
+    assert "azure-firewall-lab.tailbe0592.ts.net" in launcher
+    assert "--ServerApp.local_hostnames=" in launcher
+    assert "disable_check_xsrf" not in launcher
