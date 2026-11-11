@@ -51,11 +51,19 @@ def shape(id, value, x,y,w,h, *, fill="#FFFFFF", stroke="#9BBBD6", fg="#17324C",
 def text(id, value, x,y,w,h, *, size=16, fg="#17324C", bold=False,align="left",valign="middle"):
     return shape(id,value,x,y,w,h,fill="none",stroke="none",fg=fg,size=size,bold=bold,round=False,align=align,valign=valign,stroke_width=0,extras="pointerEvents=0;")
 
-def edge(id,x1,y1,x2,y2, *, color="#1373C8",width=3,dashed=False, arrow=True, bends=()):
+def edge(id,x1,y1,x2,y2, *, color="#1373C8",width=3,dashed=False, arrow=True,
+         bends=(),source=None,target=None,exit_anchor=None,entry_anchor=None):
     style=(f"edgeStyle=none;rounded=0;html=1;strokeColor={color};strokeWidth={width};"
            f"endArrow={'block' if arrow else 'none'};endFill=1;"
            + ("dashed=1;dashPattern=8 5;" if dashed else ""))
-    cell=ET.SubElement(root,"mxCell", id=id, value="", style=style, edge="1", parent="1")
+    if exit_anchor:
+        style += f"exitX={exit_anchor[0]};exitY={exit_anchor[1]};exitPerimeter=0;"
+    if entry_anchor:
+        style += f"entryX={entry_anchor[0]};entryY={entry_anchor[1]};entryPerimeter=0;"
+    attrib={"id":id,"value":"","style":style,"edge":"1","parent":"1"}
+    if source: attrib["source"]=source
+    if target: attrib["target"]=target
+    cell=ET.SubElement(root,"mxCell",**attrib)
     g=ET.SubElement(cell,"mxGeometry",relative="1", attrib={"as":"geometry"})
     ET.SubElement(g,"mxPoint",x=str(x1),y=str(y1),attrib={"as":"sourcePoint"})
     ET.SubElement(g,"mxPoint",x=str(x2),y=str(y2),attrib={"as":"targetPoint"})
@@ -98,7 +106,8 @@ shape("workload_subnet","",116,678,824,144,fill="#EFF8FF",stroke="#84B5D8")
 text("workload_title","WorkloadSubnet　10.0.2.0/24",137,685,750,28,size=18,bold=True)
 shape("vm_node","",155,727,332,76,fill="#FFFFFF",stroke="#4C89C0",stroke_width=1.7)
 text("vm","Ubuntu VM　vm-firewall-lab",170,734,305,29,size=18,bold=True)
-text("vm_details","Standard_B1s ／ nic-firewall-lab ／ IPなし",170,763,305,30,size=12)
+text("vm_details","Standard_B1s　|　NIC：nic-firewall-lab",170,755,305,23,size=12)
+text("vm_private","Private IPあり（自動割当）／ Public IPなし",170,781,305,20,size=12)
 
 # Policy and IP/Route resources are siblings of VNet, not subnet children.
 text("outside_label","VNet外で管理されるAzureリソース",993,285,293,33,size=15,fg="#52748E",bold=True)
@@ -136,20 +145,83 @@ text("ms_name","www.microsoft.com",1451,508,229,32,size=17,bold=True)
 text("ms_status","HTTPS 443：既定で拒否",1451,546,230,34,size=15,fg="#BA484B",bold=True)
 text("target_note","※Google許可ルール適用後の期待動作",1386,629,303,40,size=14,fg="#53687E")
 text("initial_note","ルール未設定時：両方とも既定拒否",1386,666,303,35,size=14,fg="#53687E")
+text("no_forward","Microsoft宛はFirewallで遮断され転送されない",1386,709,303,32,size=12,fg="#C83E47",bold=True)
 
-# Flow and association edges with explicit labels (geometry is editable)
-edge("vm_outbound",487,762,590,544,color=COLORS["azure"],width=4,bends=[(590,762)])
+# Primary edges have source/target shape references, so edits follow their nodes.
+edge("vm_outbound",487,762,590,544,color=COLORS["azure"],width=4,
+     bends=[(590,762)],source="vm_node",target="fw_node",
+     exit_anchor=(1,0.56),entry_anchor=(0.40,1))
 text("vm_outbound_text","VMのインターネット宛送信",508,722,380,24,size=13,fg="#1B6DA3",bold=True)
-edge("fw_green",813,449,1384,357,color=COLORS["green"],width=4,bends=[(965,449),(965,283),(1347,283),(1347,357)])
-edge("fw_red",813,480,1384,543,color=COLORS["red"],width=3,dashed=True,bends=[(955,480),(955,852),(1350,852),(1350,543)])
-edge("policy_attach",989,405,818,465,color="#8B6CB9",width=2,dashed=True,arrow=False,bends=[(947,405),(947,465)])
-edge("route_to_workload",990,760,941,749,color="#287DBD",width=2,dashed=True,arrow=False,bends=[(968,760),(968,749)])
-edge("pip_connect",989,540,816,532,color="#287DBD",width=2,dashed=True,arrow=False,bends=[(955,540),(955,532)])
-edge("mgmt_connect",989,628,941,630,color="#287DBD",width=2,dashed=True,arrow=False)
+edge("fw_green",813,449,1384,357,color=COLORS["green"],width=4,
+     bends=[(965,449),(965,274),(1347,274),(1347,357)],
+     source="fw_node",target="target_google",
+     exit_anchor=(1,0.06),entry_anchor=(0,0.35))
+# Red never reaches Microsoft. The X is the drop point at Azure Firewall.
+edge("fw_red",813,480,872,480,color=COLORS["red"],width=3,
+     dashed=True,arrow=False,source="fw_node",target="fw_block_marker",
+     exit_anchor=(1,0.37),entry_anchor=(0,0.50))
+shape("fw_block_marker","×",866,457,48,48,fill="#FFECEC",
+      stroke="#C83E47",fg="#C83E47",size=29,bold=True,align="center")
+text("fw_block_reason","Microsoft宛HTTPS：Firewallで破棄",495,544,375,25,
+     size=13,fg="#B93E47",bold=True)
+edge("policy_attach",989,405,818,465,color="#8B6CB9",width=2,
+     dashed=True,arrow=False,bends=[(947,405),(947,465)],
+     source="policy_node",target="fw_node",exit_anchor=(0,0.45),entry_anchor=(1,0.22))
+edge("route_to_workload",990,760,941,749,color="#287DBD",width=2,
+     dashed=True,arrow=False,bends=[(968,760),(968,749)],
+     source="route_node",target="workload_subnet",exit_anchor=(0,0.65),entry_anchor=(1,0.50))
+edge("pip_connect",989,540,816,532,color="#287DBD",width=2,
+     dashed=True,arrow=False,bends=[(955,540),(955,532)],
+     source="pip_data",target="fw_node",exit_anchor=(0,0.44),entry_anchor=(1,0.90))
+edge("mgmt_connect",989,628,941,630,color="#287DBD",width=2,
+     dashed=True,arrow=False,source="pip_mgmt",target="mgmt_subnet",
+     exit_anchor=(0,0.47),entry_anchor=(1,0.53))
 
 # Footer notes
 shape("footer_bg","",35,937,1685,40,fill="#EAF2FA",stroke="#BED5E9",round=True)
 text("footer","学習ポイント　① Firewallを配置するだけでは通信経路は変わらない　② UDRで経路を指定　③ Policyで通信を許可・拒否　④ 実験後にRGを削除",53,941,1640,32,size=15,fg="#285777",bold=True)
+
+# Explicit parent/child grouping: moving VNet, subnets or their nodes
+# also moves the nested labels and resources.  Coordinates in the authored
+# layout are absolute; convert them to mxGraph parent-relative geometry.
+parents = {
+    "sub_head":"subscription", "sub_title":"subscription", "rg":"subscription",
+    "rg_head":"rg", "rg_title":"rg", "vnet":"rg", "outside_label":"rg",
+    "vnet_head":"vnet", "vnet_label":"vnet", "vnet_cidr":"vnet",
+    "azfw_subnet":"vnet", "mgmt_subnet":"vnet", "workload_subnet":"vnet",
+    "azfw_subnet_band":"azfw_subnet", "azfw_subnet_title":"azfw_subnet",
+    "fw_node":"azfw_subnet", "fw_block_marker":"azfw_subnet", "fw_block_reason":"azfw_subnet",
+    "fw_icon":"fw_node", "fw_name":"fw_node", "fw_id":"fw_node", "fw_private":"fw_node",
+    "mgmt_subnet_title":"mgmt_subnet", "mgmt_note":"mgmt_subnet",
+    "workload_title":"workload_subnet", "vm_node":"workload_subnet",
+    "vm_outbound_text":"workload_subnet",
+    "vm":"vm_node", "vm_details":"vm_node", "vm_private":"vm_node",
+    "policy_node":"rg", "pip_data":"rg", "pip_mgmt":"rg", "route_node":"rg",
+    "policy_head":"policy_node","policy_id":"policy_node","rule_node":"policy_node",
+    "rule_name":"rule_node","rule_cond":"rule_node",
+    "pip_data_name":"pip_data", "pip_data_id":"pip_data",
+    "pip_mgmt_name":"pip_mgmt","pip_mgmt_id":"pip_mgmt",
+    "route_head":"route_node","route_name":"route_node","route_next":"route_node",
+    "external_band":"external_box","external_title":"external_box",
+    "target_google":"external_box","target_ms":"external_box",
+    "target_note":"external_box","initial_note":"external_box","no_forward":"external_box",
+    "g_icon":"target_google","google_name":"target_google","google_status":"target_google",
+    "m_icon":"target_ms","ms_name":"target_ms","ms_status":"target_ms",
+    "title":"title_bg", "planned":"title_bg", "footer":"footer_bg",
+}
+vertices={c.get("id"):c for c in root.findall("./mxCell") if c.get("vertex")=="1"}
+original={cid:(float(c.find("mxGeometry").get("x")),float(c.find("mxGeometry").get("y")))
+          for cid,c in vertices.items()}
+for cid,pid in parents.items():
+    cell=vertices[cid]
+    own=cell.find("mxGeometry")
+    own.set("x",str(round(original[cid][0]-original[pid][0],3)))
+    own.set("y",str(round(original[cid][1]-original[pid][1],3)))
+    cell.set("parent",pid)
+for cid in ["subscription","rg","vnet","azfw_subnet","mgmt_subnet","workload_subnet",
+            "fw_node","vm_node","policy_node","rule_node","pip_data","pip_mgmt",
+            "route_node","external_box","target_google","target_ms","footer_bg","title_bg"]:
+    vertices[cid].set("style",vertices[cid].get("style")+"container=1;collapsible=0;recursiveResize=0;")
 
 ET.indent(mxfile)
 tree=ET.ElementTree(mxfile)

@@ -19,6 +19,8 @@ iPhone Safariで使えるAzure Firewall Basicの学習教材です。
 
 Policy、Public IP、Route TableはVNetのサブネット内に配置するリソースではないため、図ではリソースグループ内のVNet外に分離しています。
 
+> iPhoneからの安全な接続方法（RDC内Tailscaleのuserspaceモード）は [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) を参照してください。まだインストール・認証は実施していません。
+
 ## 2種類の利用方法
 
 1. **学習用Notebook（推奨）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
