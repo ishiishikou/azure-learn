@@ -25,7 +25,7 @@ await page.evaluate((xmlText)=>{
       }),'*');
     }else if(msg.event==='load'){
       frame.contentWindow.postMessage(JSON.stringify({
-       action:'export',format:'png',scale:1.5,background:'#FFFFFF',
+       action:'export',format:'xmlpng',scale:1.5,background:'#FFFFFF',
        border:16,size:'page',includeData:true,withSvg:true
       }),'*');
     }else if(msg.event==='export'){

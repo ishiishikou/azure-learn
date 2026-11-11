@@ -1,105 +1,99 @@
-# iPhone Safari → RDC内のJupyterLab：Tailscale Serve手順
+# RDCコンテナ内Tailscale Serve — iPhone Safari用
 
-## 対象と前提（2026-11-11時点）
+## 現在の実測（2026-11-11）
 
-現在のRDC接続先はAlpine Linux 3.24コンテナで、Tailscale未導入・\`/dev/net/tun\`なし・\`apk search -x tailscale\` は \`tailscale-1.98.10-r1\` を返しました。JupyterLabはコンテナ内の \`127.0.0.1:8888\` で起動し、HTTP 302応答を確認しています。
+- RDC接続先：Alpine Linux 3.24コンテナ
+- `tailscale`：**1.98.10をインストール済み**
+- `tailscaled`：**userspace-networkingモードで起動済み**
+- TUNデバイスなし。WindowsホストのVPNや公開ポートは変更していない
+- Tailscaleサインイン：**利用者のブラウザ認証待ち**（CLIで都度URLを表示する。ワンタイムURLはGitHubに記録しない）
+- JupyterLab：RDC内の `127.0.0.1:8888` でHTTP応答を確認
+- ServeおよびiPhone Safariの実機確認：**認証後に実施**
 
-WindowsホストそのものにTailscaleを導入せず、**RDCコンテナに限定**してTailscaleを入れる方針です。Tailscaleの **userspace networking** を使えば、TUNデバイスやNET_ADMINを追加せずにServeでローカルHTTPをHTTPS公開できます。
+この文書はリポジトリに保存できる再現手順です。現在のログインコード・認証トークンやTailscale秘密鍵は保存しません。
 
-> これは導入前の手順書です。まだTailscaleのインストール・起動・ログイン・iPhone実測は行っていません。
+## 1. Tailscaleインストール（実施済み）
 
-## Step 1：コンテナでTailscaleパッケージを導入
-
-RDCのAlpine Linuxコンテナで実行（現在root）：
-
-\`\`\`sh
-apk add --no-cache tailscale
+```sh
+apk add tailscale
 tailscale version
-\`\`\`
+```
 
-同じコンテナでJupyterLabが \`127.0.0.1:8888\` で起動していることを確認：
+Alpineのパッケージを使用。Linuxコンテナ内にVPN用TUNがないため、Tailscaleのuserspaceモードを利用しています。
 
-\`\`\`sh
-curl -I http://127.0.0.1:8888/
-\`\`\`
+## 2. tailscaledの起動（実施済み）
 
-JupyterLabがまだ起動していなければ：
+コンテナの再起動時に起動していなければ、以下で復旧します。
 
-\`\`\`sh
+```sh
 cd /workspace/azure-firewall-notebook
-./start-notebook.sh
-\`\`\`
-
-## Step 2：userspaceモードでdaemonを起動
-
-TUNと特権NET_ADMINを使わない構成です。
-
-\`\`\`sh
-mkdir -p /root/.tailscale
-chmod 700 /root/.tailscale
+mkdir -p .state/tailscale
+chmod 700 .state .state/tailscale
 
 tailscaled \
   --tun=userspace-networking \
-  --state=/root/.tailscale/tailscaled.state \
-  --socket=/tmp/tailscaled.sock \
-  > /root/.tailscale/tailscaled.log 2>&1 &
-\`\`\`
+  --state=/workspace/azure-firewall-notebook/.state/tailscale/tailscaled.state \
+  --socket=/tmp/tailscale-lab.sock
+```
 
-このコマンドを実行しても、**まだTailscale認証は完了していません**。
+このコマンドは常駐します。別ターミナルから状態を確認してください。コンテナが再作成されても `.state` の保存が維持されるかはRDCのボリューム構成に依存します。
 
-## Step 3：tailnetにログイン
+**重要：** `.state/` は `.gitignore` に含めています。Node認証情報をコミットしないでください。
 
-\`\`\`sh
-tailscale --socket=/tmp/tailscaled.sock up --hostname=azure-firewall-lab
-\`\`\`
+## 3. tailnet認証（ユーザー操作が必要）
 
-表示される \`https://login.tailscale.com/a/...\` にiPhone Safariからアクセスして認証します。
+```sh
+tailscale --socket=/tmp/tailscale-lab.sock up \
+  --hostname=azure-firewall-lab \
+  --accept-dns=false
+```
 
-\`\`\`sh
-tailscale --socket=/tmp/tailscaled.sock status
-\`\`\`
+表示される `https://login.tailscale.com/a/...` をiPhoneのSafariから開き、Tailscaleへのログインを承認してください。承認後：
 
-## Step 4：Serveを設定（Funnelは禁止）
+```sh
+tailscale --socket=/tmp/tailscale-lab.sock status
+```
 
-Tailscale管理画面のDNSでMagicDNSとHTTPS証明書の有効化を求められた場合は、その画面で操作します。
+## 4. JupyterLabへのHTTPS接続（認証後に実施）
 
-\`\`\`sh
-tailscale --socket=/tmp/tailscaled.sock serve --bg http://127.0.0.1:8888
-tailscale --socket=/tmp/tailscaled.sock serve status
-\`\`\`
+```sh
+curl -I http://127.0.0.1:8888/
 
-表示される \`https://azure-firewall-lab.<your-tailnet>.ts.net/\` のようなURLは**同一tailnet内の端末に限定**されます。
+tailscale --socket=/tmp/tailscale-lab.sock serve \
+  --bg http://127.0.0.1:8888
 
-\`tailscale funnel\` はパブリックインターネットへ公開する機能です。**今回は使用しません。**
+tailscale --socket=/tmp/tailscale-lab.sock serve status
+```
 
-## Step 5：iPhone側
+表示された **HTTPS URL** のみをiPhone Safariで使用します。Tailscale管理画面でHTTPS/MagicDNSのセットアップを求められる場合があります。
 
-1. App StoreからTailscaleのiOSアプリをインストール
-2. RDCコンテナを参加させたのと同じtailnetにログイン
-3. iOSのVPN接続ダイアログで承認
-4. SafariからStep 4に表示されたHTTPS URLを開く
-5. JupyterLabのトークン認証を行い、\`firewall_hands_on.ipynb\` を開く
-6. 最初は**無料の読み取りセル**だけをタップして操作性を確認する
+- **Serve**：認証されたtailnet端末にだけ公開（使用する）
+- **Funnel**：インターネット上の誰でもアクセス可能になる機能（**使用禁止**）
 
-JupyterLabのログイントークンは機密情報です。GitHubやスクリーンショットに公開しないでください。
+JupyterLabのトークン認証も有効のまま使用します。トークンは秘密情報なのでGitHubやチャットに不用意に貼りません。
 
-## 終了と注意点
+## 5. iPhone側の操作
 
-\`\`\`sh
-tailscale --socket=/tmp/tailscaled.sock serve reset
-tailscale --socket=/tmp/tailscaled.sock down
-\`\`\`
+1. iPhoneにTailscaleアプリをApp Storeからインストール
+2. RDCコンテナのログインに使用したのと同じtailnetへサインイン
+3. iOSのVPN構成を許可し、Tailscaleを接続状態にする
+4. SafariからServeのHTTPS URLを開く
+5. JupyterLabで `firewall_hands_on.ipynb` を開く
+6. まず **Azureへの読み取り専用セル** で画面操作・出力確認をテストする
 
-Tailscaleを入れる場所がコンテナ内であるため、WindowsホストのVPN/TUNデバイスやインターネット公開ポートを必要としません。ただしコンテナにWindowsのファイル、Dockerソケット、Azure CLI認証キャッシュがマウントされている場合、コンテナが侵害されるとそれらも危険です。
+## セキュリティと終了
 
-- Tailscale ServeはtailnetのACLとノード承認を適用
-- Jupyterのログイントークンも必ず維持する
-- 不要なDocker権限、ホストのボリュームマウントを減らす
-- Tailscale状態ファイルをGitHubにコミットしない
-- ブラウザからNotebookを実行できる利用者は**Azure操作権限**を持つことに注意
+```sh
+tailscale --socket=/tmp/tailscale-lab.sock serve status
 
-参考：
+# 公開を停止するとき
+tailscale --socket=/tmp/tailscale-lab.sock serve reset
+tailscale --socket=/tmp/tailscale-lab.sock down
+```
+
+Tailscaleはアクセス元を限定する機構であり、**コンテナの侵害時のアクセス権限を無害化しません**。RDCコンテナにWindowsファイル、Dockerソケット、Azure認証キャッシュを共有している場合はそれらが危険になり得ます。tailnetポリシーを最小権限にし、Jupyterトークン認証を維持してください。
+
+公式：
 - https://tailscale.com/docs/concepts/userspace-networking
 - https://tailscale.com/docs/features/tailscale-serve
 - https://tailscale.com/docs/reference/tailscale-cli/serve
-- https://tailscale.com/docs/how-to/set-up-https-certificates

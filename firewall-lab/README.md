@@ -11,15 +11,18 @@ iPhone Safariで使えるAzure Firewall Basicの学習教材です。
 ## 構成図（draw.io + PNG）
 
 - 編集可能なdraw.io: `diagrams/azure-firewall-basic.drawio`
-- draw.io公式エディタから出力したPNG: `diagrams/azure-firewall-basic.png`
-- XMLの生成元: `create_diagram.py`
-- PNGをdraw.ioの埋め込みプロトコルでエクスポートするスクリプト: `diagrams/export_via_drawio.js`
+- draw.io編集用XML: `diagrams/azure-firewall-basic.drawio`
+- 画像本体に編集用XMLも含むPNG: `diagrams/azure-firewall-basic.png`
+- 生成スクリプト: `create_diagram.py`（draw.ioネイティブXML）
+- PNG出力スクリプト: `diagrams/export_via_drawio.js`（draw.io公式の `xmlpng` エクスポート）
+- 検証: `tests/test_diagram.py`（箱の包含、水平な経路、交差を増やさない接続、画像埋め込みの検査）
+- 参考：draw.io公式Codex Skill（https://github.com/jgraph/drawio-mcp/blob/main/plugins/codex/drawio/skills/drawio/SKILL.md）
 
 学習用Notebookの冒頭に画像を表示します。構成図は**予定構成**であり、Googleが許可されMicrosoftが拒否される図はルール適用後の期待動作です。実機での確認は未実施です。
 
 Policy、Public IP、Route TableはVNetのサブネット内に配置するリソースではないため、図ではリソースグループ内のVNet外に分離しています。
 
-> iPhoneからの安全な接続方法（RDC内Tailscaleのuserspaceモード）は [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) を参照してください。まだインストール・認証は実施していません。
+> iPhoneからの安全な接続方法は [TAILSCALE_SETUP.md](TAILSCALE_SETUP.md) を参照してください。RDCコンテナにはTailscaleをインストールしてuserspaceモードで起動済みです。ログイン、Serve、Safari接続は別途確認します。
 
 ## 2種類の利用方法
 
@@ -62,7 +65,7 @@ Policy、Public IP、Route TableはVNetのサブネット内に配置するリ�
 ### iPhoneからのアクセス
 
 - **VS Code Remote Tunnelのポート転送:** 8866番ポートを転送し、iPhoneのSafariで認証済みの転送URLを開きます。統合ターミナルへの貼り付けは不要です。
-- **Tailscale Serve:** iPhoneとWindows/WSL側を同一tailnetに接続し、Windows側のTailscale Serveでローカル8866をHTTPSプロキシします。**Tailscale Funnelで一般公開しない**でください。
+- **Tailscale Serve（推奨）:** RDCのLinuxコンテナ内のTailscaleからJupyterLabの `127.0.0.1:8888` をHTTPSでtailnet内に公開します。Windows側へのVPN導入やポート開放は不要です。**Tailscale Funnelで一般公開しない**でください。
 
 **Docker内にVoilàを起動した場合:** Dockerのポートをホストのループバックに公開するなど、ホストからそのポートに到達できる設定が別途必要です。コンテナ内の `127.0.0.1:8866` はそのままではiPhone/Windowsからアクセスできません。安全なポート転送が完成するまで、外部の `0.0.0.0` に安易に公開しないでください。
 
