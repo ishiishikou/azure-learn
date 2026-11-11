@@ -153,3 +153,12 @@ def test_legacy_azurelab_az_rejects_wrong_resource_group():
     client = lab.AzureLab("sub-test", executor=fake)
     with pytest.raises(lab.LabError, match="教材外"):
         client.az(["network", "vnet", "create", "-g", "other-rg", "-n", "test"])
+
+
+def test_legacy_unscoped_mutations_are_rejected():
+    fake = FakeAzureCLI()
+    fake.group = fake.tagged = True
+    client = lab.AzureLab("sub-test", executor=fake)
+    with pytest.raises(lab.LabError, match="サブスクリプション指定"): 
+        client.az(["group", "delete", "-n", lab.RG, "--yes"], scoped=False)
+    assert not any("delete" in x for x in fake.calls)

@@ -165,6 +165,9 @@ class AzureLab:
             )
 
     def az(self, args: list[str], *, scoped: bool = True, timeout: int = MAX_COMMAND_SECONDS):
+        if not scoped and any(verb in args for verb in
+                              ("create", "update", "delete", "add-filter-collection", "invoke")):
+            raise LabError("Azure変更操作には明示的なサブスクリプション指定と管理ガードが必要です。")
         if scoped and not self.subscription:
             raise LabError("サブスクリプションが未選択です。")
         if scoped:
