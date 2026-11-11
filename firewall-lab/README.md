@@ -121,3 +121,8 @@ python3 -m venv .venv
 - 学習NotebookはCLIが1セル1操作を基本とする構造に分解しています。
 - 実際のAzureへのデプロイ、Azure Firewall診断ログ、iPhone Safariの実機操作は未検証です。
 - Sol 6.1の初回独立レビューでは、通信試験の判定、既存リソースの検証、失敗系テストが不足していると指摘されました。これらを改善していますが、**実Azure・iPhoneの実測が揃うまで終了判定はINCOMPLETE**です。
+
+
+### VM Run Command の制約（重要）
+
+WorkloadSubnetで既定ルートをFirewallに向け、許可ルールを一切設定しない場合、VMエージェントや拡張機能が必要とするAzure通信まで遮断するおそれがあります。したがって、Run Commandが返答しなかった場合は**FirewallによるHTTPS拒否の成功とは扱いません**。実機検証でAzure VM Agentの要件を確認し、必要なAzure宛アウトバウンドだけを許可したうえで検証手順を調整する必要があります。現在はこの実機検証が未完了です。

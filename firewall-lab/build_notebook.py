@@ -10,9 +10,11 @@ learning.metadata["language_info"] = {"name": "python"}
 def section(title, detail):
     learning.cells.append(nb.v4.new_markdown_cell("## " + title + "\n\n" + detail))
 def step(title, purpose, command=None, *, paid=False, code=None):
+    statement = ("このセルはAzure CLIの実行ではなく、Notebook内の準備や選択を行います。"
+                 if code is not None and "session.run(" not in code and "session.login()" not in code
+                 else "次のセルは、記載のAzure CLIコマンドを1つだけ実行し、結果を同じセルに表示します。")
     learning.cells.append(nb.v4.new_markdown_cell(
-        "### " + title + "\n\n" + purpose +
-        "\n\n次のセルは、表示されたAzure CLIコマンド**1つ**を実行します。戻り値とエラーはそのセルに表示されます。"
+        "### " + title + "\n\n" + purpose + "\n\n" + statement
     ))
     if code is None:
         code = "session.run(" + repr(command) + (", paid=True" if paid else "") + ")"
@@ -124,7 +126,10 @@ step("6-6. NICの有効経路を確認","NICから見て0.0.0.0/0がVirtualAppli
 
 section("7. ルールなしで通信試験",
 """Firewall Policyに許可ルールがない状態で、GoogleとMicrosoftへのHTTPS結果を測ります。
-curlの失敗だけではFirewall遮断と断定できません。VM AgentとDNSが正常かも確認してください。""")
+curlの失敗だけではFirewall遮断と断定できません。HTTP 403/500でもHTTP応答が届いているため遮断ではありません。
+DNS失敗（curl 6）、TLS証明書エラー（60）、タイムアウト（28）、接続失敗（7）を区別します。
+また、Firewall経由のAzure宛送信が遮断されるとVM Run Commandが使えなくなる可能性があります。
+この場合はFirewallの拒否試験が成功したと判定せず、VMエージェント用通信の許可や別の観測方法を検討してください。""")
 step("7-1. ルールグループ一覧を確認","ルールがない前提であることを確かめます。",
      'az network firewall policy rule-collection-group list -g rg-firewall-lab --policy-name policy-firewall-lab')
 step("7-2. VM内のcurlで2ホストをテスト","DNS・終了コード・HTTPステータスを分けて表示します。",
@@ -163,7 +168,10 @@ step("10-4. リソースグループを削除","元に戻せません。対象�
      code='''allowed = {"vnet-firewall-lab","policy-firewall-lab","fw-firewall-lab","vm-firewall-lab",
            "nic-firewall-lab","osdisk-firewall-lab","pip-firewall-lab",
            "pip-firewall-mgmt-lab","rt-firewall-lab"}
-assert all(r.get("name") in allowed for r in inventory), "想定外のリソースが存在します"
+from lab import RESOURCE_TYPES
+assert all(RESOURCE_TYPES.get(r.get("name")) == str(r.get("type", "")).lower()
+           for r in inventory), "教材外のリソース名または種別を検出しました"
+assert session.subscription == session.locked_subscription, "サブスクリプションが固定されていません"
 session.run("az group delete -n rg-firewall-lab --yes", delete=True)''')
 step("10-5. 削除完了をAzureから確認","falseならグループが存在しません。",
      code='exists = session.run("az group exists -n rg-firewall-lab")\nsession.verify_deleted(exists)')

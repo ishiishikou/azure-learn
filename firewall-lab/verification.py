@@ -104,9 +104,13 @@ def effective_route(data: Any, target_ip: str):
             prefixes = [prefixes]
         if not isinstance(prefixes, list):
             continue
+        next_hops = r.get("nextHopIpAddress")
+        if isinstance(next_hops, str):
+            next_hops = [next_hops]
         if (
             "0.0.0.0/0" in prefixes and r.get("nextHopType") == "VirtualAppliance"
-            and r.get("nextHopIpAddress") == target_ip and r.get("state", "Active") == "Active"
+            and isinstance(next_hops, list) and next_hops == [target_ip]
+            and r.get("state", "Active") == "Active"
         ):
             return r
     raise ValidationError("NICの有効経路にFirewallへのActiveな0.0.0.0/0が見つかりません。")
@@ -161,11 +165,17 @@ def curl_results(message: str, *, allow: bool) -> dict:
     google = found["www.google.com"]
     microsoft = found["www.microsoft.com"]
     def connected(result):
-        return result[1] == 0 and 200 <= result[2] < 400
+        # Any HTTP response means the remote side was reached,
+        # even when the remote server returns 403/404/500.
+        return result[1] == 0 and 100 <= result[2] <= 599
+    def blocked_candidate(result):
+        # Only non-HTTP connection failures are plausible blocking observations.
+        # This still does not prove the Firewall caused the failure: verify logs.
+        return result[2] == 0 and result[1] in (7, 28)
     if allow:
-        if not connected(google) or connected(microsoft):
-            raise ValidationError("Google許可 / Microsoft拒否の期待結果と一致しません。")
+        if not connected(google) or not blocked_candidate(microsoft):
+            raise ValidationError("Google HTTPS接続 / Microsoft非HTTP応答の期待観測と一致しません。TLS・接続・FWログを確認してください。")
     else:
-        if connected(google) or connected(microsoft):
-            raise ValidationError("ルールなしの拒否テストでHTTPS応答を取得しました。")
+        if not blocked_candidate(google) or not blocked_candidate(microsoft):
+            raise ValidationError("ルールなしの非HTTP応答と一致しません。サーバー応答やTLSエラーをFirewall拒否として扱いません。")
     return found

@@ -90,3 +90,21 @@ def test_group_delete_check_is_strict():
     with pytest.raises(RuntimeError):
         s.verify_deleted(None)
     s.verify_deleted(False)
+
+
+def test_subscription_switch_after_any_cli_is_blocked(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "notebook_helpers.subprocess.run",
+        lambda *a, **kw: calls.append(a) or SimpleNamespace(
+            returncode=0, stdout="[]", stderr="")
+    )
+    session = LearningSession()
+    session.picker = widgets.Dropdown(options=[
+        ("study", "subscription-a"), ("other", "subscription-b")
+    ], value="subscription-a")
+    session.run("az resource list -g rg-firewall-lab")
+    session.picker.value = "subscription-b"
+    with pytest.raises(RuntimeError, match="変更されました"):
+        session.run("az group delete -n rg-firewall-lab --yes")
+    assert len(calls) == 1

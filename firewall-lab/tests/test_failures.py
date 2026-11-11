@@ -68,3 +68,18 @@ def test_corrupted_az_json_fails_closed():
     lab = AzureLab("sub-test", executor=bad)
     with pytest.raises(ValidationError):
         lab.group_exists()
+
+
+def test_effective_route_accepts_azure_cli_next_hop_array():
+    route_record = {"addressPrefix": ["0.0.0.0/0"], "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": ["10.0.0.4"], "state": "Active"}
+    assert effective_route({"value": [route_record]}, "10.0.0.4") == route_record
+
+@pytest.mark.parametrize("exit_code,http_status", [(0,500), (0,403), (60,0), (127,0)])
+def test_wrong_failure_cannot_be_reported_as_firewall_denial(exit_code, http_status):
+    message = (
+        "RESULT host=www.google.com dns=ok exit=%d http=%03d\n" % (exit_code,http_status)
+        + "RESULT host=www.microsoft.com dns=ok exit=28 http=000"
+    )
+    with pytest.raises(ValidationError):
+        curl_results(message, allow=False)

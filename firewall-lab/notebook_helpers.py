@@ -11,6 +11,7 @@ from IPython.display import display
 class LearningSession:
     def __init__(self):
         self.subscription = ""
+        self.locked_subscription = None
         self.paid_checkbox = None
         self.paid_phrase = None
         self.delete_phrase = None
@@ -40,6 +41,8 @@ class LearningSession:
         return ret
 
     def select_subscription(self, subscriptions):
+        if self.locked_subscription:
+            raise RuntimeError("この学習セッションはサブスクリプションが固定されています。切り替えは新しいカーネルで開始してください。")
         if not isinstance(subscriptions, list):
             raise RuntimeError("サブスクリプション一覧の形式が不正です。")
         enabled = [(f"{a['name']} ({a['id']})", a["id"]) for a in subscriptions
@@ -84,8 +87,14 @@ class LearningSession:
         if scoped:
             if self.picker is None or not self.picker.value:
                 raise RuntimeError("先にサブスクリプションを選択してください。")
-            args += ["--subscription", self.picker.value]
-            self.subscription = self.picker.value
+            choice = self.picker.value
+            if self.locked_subscription is None:
+                self.locked_subscription = choice
+                print("サブスクリプションを固定しました:", choice, flush=True)
+            elif self.locked_subscription != choice:
+                raise RuntimeError("サブスクリプションが途中で変更されました。安全のため操作を中断します。元の契約に戻すかカーネルを再起動してください。")
+            args += ["--subscription", self.locked_subscription]
+            self.subscription = self.locked_subscription
         if paid and not (self.paid_checkbox is not None and self.paid_checkbox.value
                          and self.paid_phrase is not None
                          and self.paid_phrase.value.strip() == "CREATE BILLABLE"):

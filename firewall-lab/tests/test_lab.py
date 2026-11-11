@@ -129,7 +129,7 @@ class FakeAzureCLI:
         if cmd[:3] == ["network", "nic", "show-effective-route-table"]:
             return res({"value": [{
                 "addressPrefix": ["0.0.0.0/0"], "nextHopType": "VirtualAppliance",
-                "nextHopIpAddress": "10.0.0.4", "state": "Active"}]})
+                "nextHopIpAddress": ["10.0.0.4"], "state": "Active"}]})
         if cmd[:2] == ["vm", "list"]:
             return res([{"name": VM}] if self.vm else [])
         if cmd[:2] == ["vm", "create"]:
