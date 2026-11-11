@@ -180,6 +180,17 @@ section("復習と完了判定",
 "各セルで行ったCLI操作とAzureの応答を照合し、どの操作がどんな変更を生んだか振り返ってください。"
 "実Azureの動作証拠が揃わなければ、模擬検証や画面表示の成功だけで完了とは判定しません。")
 
+learning.cells.insert(1, nb.v4.new_markdown_cell(
+    "## 今回の構成図（draw.ioで編集可能）\n\n"
+    "以下は**構築予定の構成**です。"
+    "Azure内のリソースとインターネット上の通信先のみを記載しています。\n\n"
+    "![Azure Firewall Basic 学習用ネットワーク構成図](diagrams/azure-firewall-basic.png)\n\n"
+    "[編集可能なdraw.io図を開く](diagrams/azure-firewall-basic.drawio)\n\n"
+    "> Firewall Policy、Public IP、UDRは独立したAzureリソースであり、"
+    "サブネットの内部に配置されるものではありません。"
+    "緑/赤の経路はGoogle許可ルール適用後の**期待動作**を示します。"
+    "実測済みではありません。"
+))
 nb.validate(learning)
 nb.write(learning,folder/"firewall_hands_on.ipynb")
 

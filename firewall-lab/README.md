@@ -6,6 +6,19 @@ iPhone Safariで使えるAzure Firewall Basicの学習教材です。
 
 補助の `mobile_dashboard.ipynb` はVoilàで表示するボタン操作画面です。こちらは自動操作を優先するため、Azureの仕組みを理解したい場合は学習Notebookを先に利用してください。
 
+
+
+## 構成図（draw.io + PNG）
+
+- 編集可能なdraw.io: `diagrams/azure-firewall-basic.drawio`
+- draw.io公式エディタから出力したPNG: `diagrams/azure-firewall-basic.png`
+- XMLの生成元: `create_diagram.py`
+- PNGをdraw.ioの埋め込みプロトコルでエクスポートするスクリプト: `diagrams/export_via_drawio.js`
+
+学習用Notebookの冒頭に画像を表示します。構成図は**予定構成**であり、Googleが許可されMicrosoftが拒否される図はルール適用後の期待動作です。実機での確認は未実施です。
+
+Policy、Public IP、Route TableはVNetのサブネット内に配置するリソースではないため、図ではリソースグループ内のVNet外に分離しています。
+
 ## 2種類の利用方法
 
 1. **学習用Notebook（推奨）:** `./start-notebook.sh` でJupyterLabを起動し、`firewall_hands_on.ipynb` を開きます。個別のAzure CLIコマンドと結果、補足説明を確認します。
