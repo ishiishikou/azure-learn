@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <mxfile host="app.diagrams.net" agent="jgraph-official-drawio-skill-derived" version="26.0.0" type="device">
   <diagram id="azure-fw-basic" name="Azure Firewall Basic - Outbound">
-    <mxGraphModel dx="1760" dy="950" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="950" math="0" shadow="0">
+    <mxGraphModel dx="1760" dy="1010" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1760" pageHeight="1010" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -21,7 +21,7 @@
           <mxGeometry as="geometry" x="47" y="140" width="1665" height="2" />
         </mxCell>
         <mxCell id="subscription" value="" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#F8FBFE;strokeColor=#B3CCDE;strokeWidth=1.8;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="46" y="166" width="1236" height="701" />
+          <mxGeometry as="geometry" x="46" y="166" width="1236" height="755" />
         </mxCell>
         <mxCell id="subscription_title" value="Azure サブスクリプション" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=22;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="subscription">
           <mxGeometry as="geometry" x="26" y="18" width="740" height="37" />
@@ -30,7 +30,7 @@
           <mxGeometry as="geometry" x="1009" y="21" width="190" height="34" />
         </mxCell>
         <mxCell id="rg" value="" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#FFFFFF;strokeColor=#C6DAE8;strokeWidth=1.6;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="subscription">
-          <mxGeometry as="geometry" x="26" y="67" width="1184" height="601" />
+          <mxGeometry as="geometry" x="26" y="67" width="1184" height="656" />
         </mxCell>
         <mxCell id="rg_label" value="Resource Group　rg-firewall-lab" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=20;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="rg">
           <mxGeometry as="geometry" x="24" y="17" width="905" height="36" />
@@ -120,46 +120,46 @@
           <mxGeometry as="geometry" x="33" y="463" width="1010" height="27" />
         </mxCell>
         <mxCell id="route_node" value="" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#F7FBFF;strokeColor=#C4DBEB;strokeWidth=1.4;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="rg">
-          <mxGeometry as="geometry" x="39" y="500" width="337" height="88" />
+          <mxGeometry as="geometry" x="39" y="500" width="337" height="122" />
         </mxCell>
         <mxCell id="route_title" value="Route Table (UDR)" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=17;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="route_node">
-          <mxGeometry as="geometry" x="19" y="9" width="302" height="25" />
+          <mxGeometry as="geometry" x="19" y="10" width="302" height="31" />
         </mxCell>
         <mxCell id="route_name" value="rt-firewall-lab" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#567087;fontSize=14;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="route_node">
-          <mxGeometry as="geometry" x="19" y="36" width="299" height="21" />
+          <mxGeometry as="geometry" x="19" y="46" width="299" height="32" />
         </mxCell>
         <mxCell id="route_next" value="WorkloadSubnet に適用" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#1473B9;fontSize=12;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="route_node">
-          <mxGeometry as="geometry" x="19" y="62" width="299" height="21" />
+          <mxGeometry as="geometry" x="19" y="81" width="299" height="30" />
         </mxCell>
         <mxCell id="policy_node" value="" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#F8F5FE;strokeColor=#D7C6E8;strokeWidth=1.4;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="rg">
-          <mxGeometry as="geometry" x="389" y="500" width="342" height="88" />
+          <mxGeometry as="geometry" x="389" y="500" width="342" height="122" />
         </mxCell>
         <mxCell id="policy_icon" value="" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;shape=image;imageAspect=0;aspect=fixed;image=https://app.diagrams.net/img/lib/azure2/networking/Azure_Firewall_Policy.svg;verticalLabelPosition=bottom;" vertex="1" parent="policy_node">
-          <mxGeometry as="geometry" x="20" y="19" width="53" height="48" />
+          <mxGeometry as="geometry" x="20" y="25" width="53" height="52" />
         </mxCell>
         <mxCell id="policy_head" value="Firewall Policy Basic" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=17;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="policy_node">
-          <mxGeometry as="geometry" x="88" y="6" width="244" height="27" />
+          <mxGeometry as="geometry" x="88" y="12" width="244" height="29" />
         </mxCell>
         <mxCell id="policy_id" value="policy-firewall-lab" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#567087;fontSize=14;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="policy_node">
-          <mxGeometry as="geometry" x="88" y="35" width="244" height="22" />
+          <mxGeometry as="geometry" x="88" y="46" width="244" height="32" />
         </mxCell>
         <mxCell id="rule_cond" value="www.google.com:443 を許可" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#725699;fontSize=12;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="policy_node">
-          <mxGeometry as="geometry" x="88" y="58" width="244" height="24" />
+          <mxGeometry as="geometry" x="88" y="81" width="244" height="30" />
         </mxCell>
         <mxCell id="pip_node" value="" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#F9FCFF;strokeColor=#C6DCEB;strokeWidth=1.4;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="rg">
-          <mxGeometry as="geometry" x="747" y="500" width="400" height="88" />
+          <mxGeometry as="geometry" x="747" y="500" width="400" height="122" />
         </mxCell>
         <mxCell id="pip_heading" value="Standard Public IP (Static) ×2" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=16;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="pip_node">
-          <mxGeometry as="geometry" x="19" y="9" width="359" height="24" />
+          <mxGeometry as="geometry" x="19" y="11" width="359" height="30" />
         </mxCell>
         <mxCell id="pip_data" value="通信用：pip-firewall-lab" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#567087;fontSize=13;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="pip_node">
-          <mxGeometry as="geometry" x="19" y="35" width="357" height="21" />
+          <mxGeometry as="geometry" x="19" y="46" width="357" height="32" />
         </mxCell>
         <mxCell id="pip_mgmt" value="管理用：pip-firewall-mgmt-lab" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#567087;fontSize=13;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="pip_node">
-          <mxGeometry as="geometry" x="19" y="59" width="357" height="20" />
+          <mxGeometry as="geometry" x="19" y="82" width="357" height="30" />
         </mxCell>
         <mxCell id="external_box" value="" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#FFFFFF;strokeColor=#C5D4DE;strokeWidth=1.6;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="1319" y="233" width="403" height="602" />
+          <mxGeometry as="geometry" x="1319" y="233" width="403" height="656" />
         </mxCell>
         <mxCell id="external_title" value="Azureからのアクセス先" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#193550;fontSize=21;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="external_box">
           <mxGeometry as="geometry" x="26" y="24" width="356" height="35" />
@@ -207,7 +207,7 @@
           <mxGeometry as="geometry" relative="1" />
         </mxCell>
         <mxCell id="footer" value="" style="rounded=1;arcSize=9;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=#E8F2FA;strokeColor=#D5E5F0;strokeWidth=1;fontColor=#193550;fontSize=17;fontStyle=0;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=12;spacingRight=12;spacingTop=3;spacingBottom=3;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
-          <mxGeometry as="geometry" x="46" y="883" width="1676" height="47" />
+          <mxGeometry as="geometry" x="46" y="942" width="1676" height="47" />
         </mxCell>
         <mxCell id="footer_text" value="学習ポイント：① UDRで経路を指定　　② Policyで通信を制御　　③ 認証・通信を確認後、学習用リソースグループを削除" style="rounded=0;arcSize=0;whiteSpace=wrap;html=1;overflow=hidden;glass=0;shadow=0;fillColor=none;strokeColor=none;strokeWidth=0;fontColor=#2C6286;fontSize=15;fontStyle=1;fontFamily=Arial;align=left;verticalAlign=middle;spacingLeft=0;spacingRight=0;spacingTop=3;spacingBottom=3;pointerEvents=0;" vertex="1" parent="footer">
           <mxGeometry as="geometry" x="19" y="7" width="1632" height="31" />

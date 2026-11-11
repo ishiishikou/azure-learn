@@ -119,3 +119,16 @@ def test_png_has_embedded_diagram_metadata():
                 break
         if typ==b"IDAT": break
     assert found, "Draw.io編集用mxfile XMLがPNG内に含まれません"
+
+
+def test_bottom_resource_labels_have_legible_height_and_margin():
+    # Guard against the exact text-clipping regression found by Sol review.
+    shapes = cells()
+    for name in ("route_name", "policy_id", "pip_data", "pip_mgmt"):
+        _, _, width, height = bounds(shapes[name])
+        assert width >= 200, name
+        assert height >= 30, name
+        parent = shapes[name].get("parent")
+        lx, ly, lw, lh = abs_pos(name, shapes)
+        bx, by, bw, bh = abs_pos(parent, shapes)
+        assert ly + lh <= by + bh - 8, f"{name} is too close to card bottom"

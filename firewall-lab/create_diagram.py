@@ -22,7 +22,7 @@ COL = {
     "green": "#11855C", "softGreen": "#EAF7F0",
     "red": "#C34748", "softRed": "#FFF0F1", "white": "#FFFFFF",
 }
-W, H = 1760, 950
+W, H = 1760, 1010
 mx = ET.Element("mxfile", host="app.diagrams.net", agent="jgraph-official-drawio-skill-derived",
                 version="26.0.0", type="device")
 diagram = ET.SubElement(mx, "diagram", id="azure-fw-basic", name="Azure Firewall Basic - Outbound")
@@ -93,11 +93,11 @@ cell("status_chip","構築予定・実機未検証",1394,56,294,38,
 cell("header_divider","",47,140,1665,2,fill="#DCE7EF",round=0,sw=0)
 
 # Azure vs Internet high-level regions
-cell("subscription","",46,166,1236,701,fill="#F8FBFE",stroke="#B3CCDE",sw=1.8,round=12)
+cell("subscription","",46,166,1236,755,fill="#F8FBFE",stroke="#B3CCDE",sw=1.8,round=12)
 label("subscription_title","Azure サブスクリプション",72,184,740,37,fs=22,bold=True)
 cell("region_chip","Japan East",1055,187,190,34,fill=COL["softBlue"],
      stroke="#CAE2F4",fs=15,font=COL["blue"],bold=True,align="center")
-cell("rg","",72,233,1184,601,fill=COL["white"],stroke="#C6DAE8",sw=1.6,round=12)
+cell("rg","",72,233,1184,656,fill=COL["white"],stroke="#C6DAE8",sw=1.6,round=12)
 label("rg_label","Resource Group　rg-firewall-lab",96,250,905,36,fs=20,bold=True)
 
 cell("vnet","",97,306,1133,373,fill=COL["vnet"],stroke="#91BAD9",sw=1.7,round=12)
@@ -141,22 +141,22 @@ label("mgmt_detail","Basicの管理通信専用",917,616,263,26,fs=13,color=COL[
 
 # Control plane resources are RG objects, not nested inside subnets.
 label("control_caption","VNetの外側で管理されるAzureリソース",105,696,1010,27,fs=14,color=COL["muted"])
-cell("route_node","",111,733,337,88,fill="#F7FBFF",stroke="#C4DBEB",sw=1.4)
-label("route_title","Route Table (UDR)",130,742,302,25,fs=17,bold=True)
-label("route_name","rt-firewall-lab",130,769,299,21,fs=14,color=COL["muted"])
-label("route_next","WorkloadSubnet に適用",130,795,299,21,fs=12,color=COL["blue"])
-cell("policy_node","",461,733,342,88,fill="#F8F5FE",stroke="#D7C6E8",sw=1.4)
-icon("policy_icon",481,752,53,48,"https://app.diagrams.net/img/lib/azure2/networking/Azure_Firewall_Policy.svg")
-label("policy_head","Firewall Policy Basic",549,739,244,27,fs=17,bold=True)
-label("policy_id","policy-firewall-lab",549,768,244,22,fs=14,color=COL["muted"])
-label("rule_cond","www.google.com:443 を許可",549,791,244,24,fs=12,color="#725699")
-cell("pip_node","",819,733,400,88,fill="#F9FCFF",stroke="#C6DCEB",sw=1.4)
-label("pip_heading","Standard Public IP (Static) ×2",838,742,359,24,fs=16,bold=True)
-label("pip_data","通信用：pip-firewall-lab",838,768,357,21,fs=13,color=COL["muted"])
-label("pip_mgmt","管理用：pip-firewall-mgmt-lab",838,792,357,20,fs=13,color=COL["muted"])
+cell("route_node","",111,733,337,122,fill="#F7FBFF",stroke="#C4DBEB",sw=1.4)
+label("route_title","Route Table (UDR)",130,743,302,31,fs=17,bold=True)
+label("route_name","rt-firewall-lab",130,779,299,32,fs=14,color=COL["muted"])
+label("route_next","WorkloadSubnet に適用",130,814,299,30,fs=12,color=COL["blue"])
+cell("policy_node","",461,733,342,122,fill="#F8F5FE",stroke="#D7C6E8",sw=1.4)
+icon("policy_icon",481,758,53,52,"https://app.diagrams.net/img/lib/azure2/networking/Azure_Firewall_Policy.svg")
+label("policy_head","Firewall Policy Basic",549,745,244,29,fs=17,bold=True)
+label("policy_id","policy-firewall-lab",549,779,244,32,fs=14,color=COL["muted"])
+label("rule_cond","www.google.com:443 を許可",549,814,244,30,fs=12,color="#725699")
+cell("pip_node","",819,733,400,122,fill="#F9FCFF",stroke="#C6DCEB",sw=1.4)
+label("pip_heading","Standard Public IP (Static) ×2",838,744,359,30,fs=16,bold=True)
+label("pip_data","通信用：pip-firewall-lab",838,779,357,32,fs=13,color=COL["muted"])
+label("pip_mgmt","管理用：pip-firewall-mgmt-lab",838,815,357,30,fs=13,color=COL["muted"])
 
 # Internet destination panel
-cell("external_box","",1319,233,403,602,fill=COL["white"],stroke="#C5D4DE",sw=1.6,round=12)
+cell("external_box","",1319,233,403,656,fill=COL["white"],stroke="#C5D4DE",sw=1.6,round=12)
 label("external_title","Azureからのアクセス先",1345,257,356,35,fs=21,bold=True)
 label("external_sub","通信結果はルール適用後の期待動作",1345,300,352,31,
       fs=14,color=COL["muted"])
@@ -188,10 +188,10 @@ connect("fw_red","fw_node","fw_block_marker",COL["red"],width=2.5,
         dashed=True,exitXY=(0.50,1),entryXY=(0.50,0),arrow=False,parent="azfw_subnet")
 
 # Footer: concise learning cues, no extra fake traffic.
-cell("footer","",46,883,1676,47,fill=COL["softBlue"],stroke="#D5E5F0",
+cell("footer","",46,942,1676,47,fill=COL["softBlue"],stroke="#D5E5F0",
      round=9,sw=1)
 label("footer_text","学習ポイント：① UDRで経路を指定　　② Policyで通信を制御　　③ 認証・通信を確認後、学習用リソースグループを削除",
-      65,890,1632,31,fs=15,bold=True,color="#2C6286")
+      65,949,1632,31,fs=15,bold=True,color="#2C6286")
 
 # Assign correct parent-child structure with relative coordinates.
 parents = {
