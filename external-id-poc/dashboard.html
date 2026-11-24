@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>External ID PoC | アプリ</title>
+</head>
+<body data-page="dashboard">
+  <main class="card" id="auth-shell">
+    <div class="eyebrow">MICROSOFT ENTRA EXTERNAL ID</div>
+    <h1>アクセス権を確認中</h1>
+    <p id="status" role="status" aria-live="polite">APIでアクセストークンを検証しています…</p>
+    <div class="actions">
+      <button id="retry" type="button" class="primary hidden">再認証する</button>
+    </div>
+  </main>
+
+  <!-- App is not displayed unless the backend confirms the access token. -->
+  <!-- Never embed private data in static HTML. -->
+  <main class="card" id="application" hidden>
+    <div class="eyebrow">PROTECTED APPLICATION · DEMO</div>
+    <h1>アプリケーション画面</h1>
+    <p class="lead">こんにちは、<strong id="user-name"></strong>さん。</p>
+    <p id="api-message" role="status" aria-live="polite"></p>
+    <p class="note">Microsoft Entra External IDで認証し、バックエンドのJWT・api.read検証が成功したため、この画面を表示しています。</p>
+    <div class="actions">
+      <button id="sign-out-local" type="button" class="primary">⑤なしで再ログイン（アプリのみ終了）</button>
+      <button id="sign-out" type="button" class="secondary">Microsoftからもログアウト（⑤あり）</button>
+    </div>
+    <p class="note">検証用：⑤なしの操作はMicrosoft側のSSOセッションを終了しません。パスワード入力なしで戻る場合があります。</p>
+    <p class="note">このHTMLとJavaScriptは公開ファイルです。実際の機密データはAPIの認可後にのみ返してください。</p>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
